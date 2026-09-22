@@ -7,7 +7,7 @@ namespace FourDex.Tests
 {
     /// <summary>
     /// The SPEC §25 invariants that belong to the math core. The focusW / position.w invariants
-    /// live with the player state once it exists; they are not Math4D's to enforce.
+    /// are not Math4D's to enforce; they are in <see cref="PlayerStateTests"/>.
     /// </summary>
     public class InvariantTests
     {

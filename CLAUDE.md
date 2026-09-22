@@ -15,17 +15,22 @@ substitute a different design.
 
 ## Current status
 
-Milestone 0 in progress, on Windows. `src/4Dex.Math4D` and `src/4Dex.World4D`
-build and `tests/4Dex.Tests` passes (78/78, .NET SDK 10.0.401). World4D's
-namespace is `FourDex.World`, not `FourDex.World4D`: a namespace named like its
-`World4D` class would shadow the class from every other `FourDex.*` namespace.
+Milestone 0 in progress, on Windows. `src/` holds three engine-free libraries,
+Math4D, World4D and Player4D (Player4DState, the §25 focusW / position.w
+invariants). They build and `tests/4Dex.Tests` passes (84/84, .NET SDK 10.0.401).
+`src/` is also the Unity local package `com.fourdex.core`, so the same sources
+compile in Unity, with `noEngineReferences` asmdefs. dotnet output goes to
+`artifacts/` (see `Directory.Build.props`) so Unity never sees `obj/`. A new
+library under `src/` needs a `.csproj`, an `.asmdef` and a `csc.rsp`.
+Namespaces are `FourDex.World` and `FourDex.Player`, not `...World4D` /
+`...Player4D`: a namespace named like a class in it would shadow that class from
+every other `FourDex.*` namespace.
 The Unity project lives at the repo root (URP Blank template, OpenXR 1.18.0,
 XR Management 4.7.0). XR is configured by `Assets/4Dex/Editor/XRProjectSetup.cs`
 (menu **4Dex > Configure XR**): OpenXR loader on Standalone, Oculus Touch
 profile. It is idempotent; rerun it rather than clicking through Project Settings.
-Still to do for Milestone 0: getting Math4D/World4D into Unity, Player4DState
-(owns the focusW / position.w invariants), HmdPoseSource/XRRig, CoordinateHUD,
-Lab4D scene.
+Still to do for Milestone 0: HmdPoseSource/XRRig, the MonoBehaviour wrappers
+(Player4D, Object4DBehaviour/World4DRegistry), CoordinateHUD, Lab4D scene.
 
 Unity runs headless, so Unity-side code can be compiled without the user:
 

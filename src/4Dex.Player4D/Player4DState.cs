@@ -1,0 +1,107 @@
+using System;
+using FourDex.Math4D;
+
+namespace FourDex.Player
+{
+    /// <summary>
+    /// The player's 4D pose and W focus: the state behind SPEC §7's three W interactions.
+    /// </summary>
+    /// <remarks>
+    /// Each operation touches exactly one piece of state, which is what keeps them independent:
+    /// <list type="bullet">
+    /// <item><b>Move</b> (§7A) changes <c>Pose.Position</c> only.</item>
+    /// <item><b>Rotate</b> (§7B) changes <c>Pose.Rotation</c> only.</item>
+    /// <item><b>Focus</b> (§7C) changes <see cref="FocusW"/> only.</item>
+    /// </list>
+    /// <see cref="FocusW"/> is measured along the viewer's own W axis, relative to the player, because the slice
+    /// projection computes <c>deltaW_eff = dw - focusW</c> with <c>dw</c> already viewer-relative
+    /// (ARCHITECTURE §5). So moving ana/kata leaves FocusW's value untouched, and focus travels with the player.
+    /// Engine-free so the SPEC §25 invariants are tested without Unity; the Unity components wrap this.
+    /// </remarks>
+    public sealed class Player4DState
+    {
+        public Player4DState(Transform4 pose, float focusW = 0f)
+        {
+            RequireFinite(pose.Position, nameof(pose));
+            RequireFinite(focusW, nameof(focusW));
+            Pose = pose;
+            FocusW = focusW;
+        }
+
+        public Player4DState() : this(Transform4.Identity) { }
+
+        public Transform4 Pose { get; private set; }
+
+        /// <summary>Viewer-relative W distance the perception system emphasises. Positive is ana.</summary>
+        public float FocusW { get; private set; }
+
+        public Vec4 Position => Pose.Position;
+
+        public Rotor4 Orientation => Pose.Rotation;
+
+        // ---- §7A: move ----
+
+        /// <summary>Move by a world-space offset, including through world W.</summary>
+        public void MoveWorld(Vec4 worldDelta)
+        {
+            RequireFinite(worldDelta, nameof(worldDelta));
+            Pose = Pose.Translated(worldDelta);
+        }
+
+        /// <summary>
+        /// Move along the player's own axes. Once the view is turned through W, "forward" has a world-W
+        /// component, so this can change <c>Position.W</c>: that is real movement, not a coupling to rotation.
+        /// </summary>
+        public void MoveLocal(Vec4 localDelta)
+        {
+            RequireFinite(localDelta, nameof(localDelta));
+            Pose = Pose.TranslatedLocal(localDelta);
+        }
+
+        /// <summary>Move straight ana (<c>+</c>) or kata (<c>-</c>) along world W.</summary>
+        public void MoveAnaKata(float worldDeltaW) => MoveWorld(new Vec4(0f, 0f, 0f, worldDeltaW));
+
+        // ---- §7B: rotate ----
+
+        /// <summary>Turn in the player's own planes. Position and focus are unchanged.</summary>
+        public void RotateLocal(Rotor4 delta) => Pose = Pose.RotatedLocal(delta);
+
+        public void RotateLocal(Plane4 plane, float angle)
+        {
+            RequireFinite(angle, nameof(angle));
+            RotateLocal(Rotor4.FromPlane(plane, angle));
+        }
+
+        /// <summary>
+        /// Instant return to the unrotated view, keeping position and focus (SPEC §22 comfort reset).
+        /// </summary>
+        public void ResetOrientation() => Pose = Pose.WithRotation(Rotor4.Identity);
+
+        // ---- §7C: focus ----
+
+        public void SetFocusW(float focusW)
+        {
+            RequireFinite(focusW, nameof(focusW));
+            FocusW = focusW;
+        }
+
+        public void AdjustFocusW(float delta) => SetFocusW(FocusW + delta);
+
+        // A NaN or infinity here would quietly poison every later projection, which reads as a rendering bug.
+        private static void RequireFinite(float value, string name)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+                throw new ArgumentOutOfRangeException(name, value, "Must be finite.");
+        }
+
+        private static void RequireFinite(Vec4 v, string name)
+        {
+            RequireFinite(v.X, name);
+            RequireFinite(v.Y, name);
+            RequireFinite(v.Z, name);
+            RequireFinite(v.W, name);
+        }
+
+        public override string ToString() => $"{Pose}, FocusW {FocusW}";
+    }
+}

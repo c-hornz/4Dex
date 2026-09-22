@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Engine-free player state. Lives here rather than under Assets/ because the SPEC §25 focusW / position.w
+    invariants must be testable without Unity (ARCHITECTURE §7). Unity components wrap it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>4Dex.Player4D</AssemblyName>
+    <!-- Not FourDex.Player4D, for the same reason World4D's is FourDex.World: avoid shadowing a class name. -->
+    <RootNamespace>FourDex.Player</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\4Dex.Math4D\4Dex.Math4D.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+{
+    "name": "4Dex.Player4D",
+    "rootNamespace": "FourDex.Player",
+    "references": [
+        "4Dex.Math4D"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

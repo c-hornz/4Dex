@@ -43,7 +43,13 @@ compile-time guarantee — the assembly cannot reference what it does not link.
 It also means the mathematical core, which is where 4D bugs actually live
 (SPEC §20), is fully testable without Unity or a headset.
 
-Unity consumes the libraries as source or as a built DLL.
+Unity consumes the libraries as source: `src/` is the local package
+`com.fourdex.core` (`Packages/manifest.json` → `file:../src`), with one asmdef per
+library, each with `noEngineReferences: true`, so Unity's compiler rejects
+`UnityEngine` there as well.
+
+Player4DState's core sits here too, not under `Assets/`, because §7 requires its
+focusW / position.w invariants to be testable without Unity.
 
 ---
 
@@ -186,10 +192,11 @@ Milestone 6; its cost bound is occluder count x receiver pixels.
     src/4Dex.Math4D/     Vec4  Quat  Plane4(enum)  Rotor4  Basis4  Transform4
                          IProjection4  SliceProjection  Projected4
     src/4Dex.World4D/    Object4D  Cell4D  World4D  (Maze4D/Collision4D stubs)
+    src/4Dex.Player4D/   Player4DState
     tests/4Dex.Tests/    Vec4Tests  RotorTests  BasisTests  TransformTests
-                         ProjectionTests  InvariantTests
+                         ProjectionTests  InvariantTests  PlayerStateTests
     Assets/4Dex/Runtime/World4D/    Object4DBehaviour  World4DRegistry
-    Assets/4Dex/Runtime/Player4D/   Player4DState
+    Assets/4Dex/Runtime/Player4D/   (MonoBehaviour wrapper around Player4DState)
     Assets/4Dex/Runtime/XR/         HmdPoseSource  XRRig
     Assets/4Dex/Runtime/Debug4D/    CoordinateHUD
     ProjectSettings/  Packages/manifest.json  Assets/Scenes/Lab4D.unity
