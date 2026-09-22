@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a69e19679bfac24685ee2b7e806a12b, type: 3}
+  m_Name: CUSTOM
+  m_EditorClassIdentifier: 4Dex.Runtime::FourDex.Runtime.InputMappingProfile
+  Profile:
+    Name: CUSTOM
+    Bindings:
+    - Signal: 0
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 30
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 0
+        XZ: 1
+        YZ: 0
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 0
+        Y: 0
+        Z: 0
+        W: 0
+    - Signal: 1
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 30
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 0
+        XZ: 0
+        YZ: 1
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 0
+        Y: 0
+        Z: 0
+        W: 0
+    - Signal: 2
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 30
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 1
+        XZ: 0
+        YZ: 0
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 0
+        Y: 0
+        Z: 0
+        W: 0
+    - Signal: 3
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 0.2
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 0
+        XZ: 0
+        YZ: 0
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 1
+        Y: 0
+        Z: 0
+        W: 0
+    - Signal: 4
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 0.2
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 0
+        XZ: 0
+        YZ: 0
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 0
+        Y: 1
+        Z: 0
+        W: 0
+    - Signal: 5
+      Enabled: 1
+      Mode: 0
+      DeadZone: 0
+      Exponent: 1
+      CurveReference: 0.2
+      Gain: 1
+      Invert: 0
+      Clamp: 0
+      Weights:
+        XY: 0
+        XZ: 0
+        YZ: 0
+        XW: 0
+        YW: 0
+        ZW: 0
+        X: 0
+        Y: 0
+        Z: 1
+        W: 0
+    WRotationGain: 1
+    WTranslationGain: 1

@@ -228,6 +228,30 @@ Lab objects at w = 0, +1, -1 per SPEC §23.
 
 ---
 
+## 8a. Input mapping semantics (Milestone 4, decided with the user)
+
+SPEC §5/§6 examples such as "head pitch → 70% YZ + 30% YW" need an
+interpretation, because §3 already gives the camera 100% of the physical pose.
+The answers below were decided with the user on 2026-09-22:
+
+- **Perceived fraction.** A weight on an input's own conventional channel is the
+  fraction of the motion perceived as ordinary. The pairs are yaw with XZ, pitch
+  with YZ, roll with XY, and HeadX/Y/Z with X/Y/Z. 1.0 is normal. Below 1, the
+  4D view follows the head by the remainder, so less motion is perceived.
+  CLASSIC is therefore "no bindings". Every other weight adds motion in its
+  plane or axis.
+- **Delta (steer) is the default mode.** The shaped offset from neutral is a
+  rate, integrated into `Player4DState`: hold a tilt to keep turning. Absolute
+  (follow) is per-binding: the offset is an amount, and returning to neutral
+  returns the view.
+- **Rotations pivot at the eye** (`Player4DState.RotateLocalAbout`). "The world
+  follows the head" then turns about the viewpoint, not the feet. The eye's 4D
+  position is exactly preserved. A raised pivot means YW/ZW rotation does move
+  the floor origin's W.
+- One engine (`src/4Dex.Input4D`, engine-free and tested). Profiles are
+  `InputMappingProfile` assets over it. `HeadMappingDriver` is the rig's second
+  `PoseSampled` consumer, and never touches the camera.
+
 ## 9. Risks
 
 1. **Rigid objects vs. true hypersurface slicing.** Milestones 0-1 treat a 4D

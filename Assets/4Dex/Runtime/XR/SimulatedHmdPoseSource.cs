@@ -21,7 +21,16 @@ namespace FourDex.XR
         /// <summary>Degrees; positive looks down (Unity pitch). Clamped short of straight up/down.</summary>
         public float Pitch { get; private set; }
 
-        public Quaternion Rotation => Quaternion.Euler(Pitch, Yaw, 0f);
+        /// <summary>Degrees; Unity roll (+ tilts the head's X axis toward its Y). Lets desktop mode exercise roll mappings.</summary>
+        public float Roll { get; private set; }
+
+        /// <summary>Metres forward (+) or back (-) of the standing spot, for lean mappings. Clamped to a plausible lean.</summary>
+        public float Lean { get; private set; }
+
+        private const float MaxRoll = 60f;
+        private const float MaxLean = 0.35f;
+
+        public Quaternion Rotation => Quaternion.Euler(Pitch, Yaw, Roll);
 
         /// <summary>Head yaw only, for head-relative walking that does not dip when looking down.</summary>
         public Quaternion YawRotation => Quaternion.Euler(0f, Yaw, 0f);
@@ -32,16 +41,22 @@ namespace FourDex.XR
             Pitch = Mathf.Clamp(Pitch + deltaPitch, -MaxPitch, MaxPitch);
         }
 
+        public void Tilt(float deltaRoll) => Roll = Mathf.Clamp(Roll + deltaRoll, -MaxRoll, MaxRoll);
+
+        public void LeanBy(float delta) => Lean = Mathf.Clamp(Lean + delta, -MaxLean, MaxLean);
+
         public void Recenter()
         {
             Yaw = 0f;
             Pitch = 0f;
+            Roll = 0f;
+            Lean = 0f;
         }
 
         public bool TryGetPose(out HmdPose pose)
         {
             // Always "tracked": the simulation never loses the head. The HUD labels desktop mode separately.
-            pose = new HmdPose(new Vector3(0f, EyeHeight, 0f), Rotation, true);
+            pose = new HmdPose(new Vector3(0f, EyeHeight, Lean), Rotation, true);
             return true;
         }
     }

@@ -6,6 +6,7 @@
         "4Dex.World4D",
         "4Dex.Player4D",
         "4Dex.Perception4D",
+        "4Dex.Input4D",
         "4Dex.XR",
         "UnityEngine.UI",
         "Unity.InputSystem"

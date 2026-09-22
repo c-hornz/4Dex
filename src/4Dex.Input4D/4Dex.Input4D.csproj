@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The generalized input mapping (SPEC §5, §6): physical offsets to 4D motion, as profiles over one engine.
+    Engine-free so every mapping rule is tested without Unity or a headset; the Unity side only reads the HMD
+    pose and applies the result.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>4Dex.Input4D</AssemblyName>
+    <!-- Not FourDex.Input: that would shadow UnityEngine.Input from every FourDex.* namespace. -->
+    <RootNamespace>FourDex.InputMapping</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\4Dex.Math4D\4Dex.Math4D.csproj" />
+  </ItemGroup>
+
+</Project>

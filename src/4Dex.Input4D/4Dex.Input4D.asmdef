@@ -1,0 +1,16 @@
+{
+    "name": "4Dex.Input4D",
+    "rootNamespace": "FourDex.InputMapping",
+    "references": [
+        "4Dex.Math4D"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

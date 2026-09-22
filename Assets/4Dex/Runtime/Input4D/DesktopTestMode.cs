@@ -30,16 +30,17 @@ namespace FourDex.Runtime
         }
 
         public const string Legend =
-            "DESKTOP  RMB-drag look   WASD walk   R / F ana / kata   Shift fast\n" +
-            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ     FOCUS  [ ]  or wheel\n" +
-            "RESET  Backspace view + focus   Shift+Backspace everything\n" +
-            "PANELS  Tab parameters (Up/Down, - / =)   V W-slice view";
+            "MOVE  WASD walk   R / F ana / kata   Shift fast      HEAD  RMB-drag look   Q / E roll   T / G lean\n" +
+            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel\n" +
+            "MAPPING  P profile   X freeze   C recenter      PANELS  Tab parameters   V W-slice   H this help\n" +
+            "RESET  Backspace view + focus + CLASSIC mapping   Shift+Backspace everything";
 
         [SerializeField] private XRRig? _rig;
         [SerializeField] private Player4D? _player;
         [SerializeField] private CoordinateHUD? _hud;
         [SerializeField] private RuntimeParameterPanel? _panel;
         [SerializeField] private WSliceViewer? _sliceViewer;
+        [SerializeField] private HeadMappingDriver? _mapping;
         [SerializeField] private HeadMode _headMode = HeadMode.Auto;
         [SerializeField] private DesktopSpeeds _speeds = DesktopSpeeds.Default;
 
@@ -67,7 +68,7 @@ namespace FourDex.Runtime
                 _rig.PoseSource = _simulatedHead;
             }
             if (_hud != null)
-                _hud.Footer = BuildFooter;
+                _hud.Help = BuildHelp;
         }
 
         private void OnDisable()
@@ -77,7 +78,7 @@ namespace FourDex.Runtime
             _simulatedHead = null;
             _previousSource = null;
             if (_hud != null)
-                _hud.Footer = null;
+                _hud.Help = null;
         }
 
         private void Update()
@@ -93,6 +94,13 @@ namespace FourDex.Runtime
 
             DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
                 _player.ResetToStart);
+            // SPEC §22: the emergency reset also returns the head mapping to conventional, recentred.
+            if ((_lastCommands.ResetView || _lastCommands.ResetAll) && _mapping != null)
+                _mapping.ReturnToConventional();
+
+            DriveMapping(Keyboard.current, _mapping);
+            if (_hud != null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
+                _hud.HelpVisible = !_hud.HelpVisible;
 
             DrivePanels(Keyboard.current, _panel, _sliceViewer, _repeat, Time.unscaledTime);
         }
@@ -121,6 +129,19 @@ namespace FourDex.Runtime
             if (repeat.Fired(k.minusKey, now)) panel.Adjust(-1, coarse);
         }
 
+        /// <summary>P cycles the mapping profile, X toggles freeze, C recentres. Static so tests can drive it.</summary>
+        public static void DriveMapping(Keyboard? k, HeadMappingDriver? mapping)
+        {
+            if (k == null || mapping == null)
+                return;
+            if (k.pKey.wasPressedThisFrame)
+                mapping.SetProfile(mapping.ActiveIndex + (k.shiftKey.isPressed ? -1 : 1));
+            if (k.xKey.wasPressedThisFrame)
+                mapping.Frozen = !mapping.Frozen;
+            if (k.cKey.wasPressedThisFrame)
+                mapping.Recenter();
+        }
+
         /// <summary>Press fires once; holding fires again after a pause, then steadily, like a text cursor.</summary>
         public sealed class KeyRepeat
         {
@@ -145,7 +166,7 @@ namespace FourDex.Runtime
         }
 
         // Pulled by the HUD at its own refresh rate, so the monitor costs nothing between refreshes.
-        private string BuildFooter() =>
+        private string BuildHelp() =>
             (IsSimulatingHead ? "" : "(head: real HMD)\n") + Legend + "\n" + DescribeInput(Keyboard.current, _lastCommands);
 
         /// <summary>Turns the current device state into commands. Static so tests can drive it with simulated devices.</summary>
@@ -160,6 +181,8 @@ namespace FourDex.Runtime
                 if (c.Walk.sqrMagnitude > 1f)
                     c.Walk.Normalize();
                 c.AnaKata = Axis(k.rKey, k.fKey);
+                c.HeadRoll = Axis(k.qKey, k.eKey);
+                c.HeadLean = Axis(k.tKey, k.gKey);
                 c.XW = Axis(k.lKey, k.jKey);
                 c.YW = Axis(k.oKey, k.uKey);
                 c.ZW = Axis(k.iKey, k.kKey);
@@ -214,6 +237,8 @@ namespace FourDex.Runtime
             int start = sb.Length;
             AppendIf(sb, "walk", c.Walk.x, c.Walk.y);
             AppendIf(sb, "anaKata", c.AnaKata);
+            AppendIf(sb, "headRoll", c.HeadRoll);
+            AppendIf(sb, "headLean", c.HeadLean);
             AppendIf(sb, "XW", c.XW);
             AppendIf(sb, "YW", c.YW);
             AppendIf(sb, "ZW", c.ZW);

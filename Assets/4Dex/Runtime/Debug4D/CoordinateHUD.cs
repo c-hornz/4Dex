@@ -23,6 +23,9 @@ namespace FourDex.Runtime
         [Tooltip("Optional: adds focusWidth and one line per 4D object (signed W gap, band, visibility).")]
         [SerializeField] private ProjectionDriver? _projection;
 
+        [Tooltip("Optional: adds the input mapping monitor (SPEC §20): profile, and each head input with the 4D motion it drives.")]
+        [SerializeField] private HeadMappingDriver? _mapping;
+
         [Tooltip("Top-centre of the panel in the camera's frame, in metres; the panel grows downward from here. About 20 degrees below the line of sight: glance down to read it, and it does not cover the lab.")]
         [SerializeField] private Vector3 _offset = new Vector3(0f, -0.3f, 1.2f);
 
@@ -31,19 +34,30 @@ namespace FourDex.Runtime
 
         [SerializeField] private int _fontSize = 18;
 
+        [Tooltip("Top-left corner of the help panel (key legend, input monitor), metres in the camera's frame: up and left, clear of the lab.")]
+        [SerializeField] private Vector3 _helpOffset = new Vector3(-0.62f, 0.45f, 1.2f);
+
         // Canvas units are millimetres (DebugPanel).
         private const float PanelWidth = 900f;
         private const float Padding = 14f;
 
         private Text? _text;
+        private Text? _helpText;
         private float _nextRefresh;
         private float _lastSampleTime = -1f;
         private readonly RotationMonitor _rotation = new RotationMonitor();
 
         public string CurrentText => _text != null ? _text.text : string.Empty;
 
-        /// <summary>Supplies extra lines under the readout at each refresh, e.g. the desktop key legend and input monitor. Null for none.</summary>
+        /// <summary>Supplies extra lines under the readout at each refresh. Null for none.</summary>
         public Func<string>? Footer { get; set; }
+
+        /// <summary>Supplies the separate help panel's text (desktop key legend, input monitor). Null hides it.</summary>
+        public Func<string>? Help { get; set; }
+
+        public bool HelpVisible { get; set; } = true;
+
+        public string CurrentHelpText => _helpText != null ? _helpText.text : string.Empty;
 
         private void Update()
         {
@@ -69,12 +83,38 @@ namespace FourDex.Runtime
                 _lastSampleTime = now;
             }
             string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null);
+            if (_mapping != null)
+                readout += "\n" + MappingReadout.Format(_mapping.ActiveName, _mapping.MappingEnabled, _mapping.Frozen, _mapping.Contributions);
             string? footer = Footer?.Invoke();
             text.text = string.IsNullOrEmpty(footer) ? readout : readout + "\n\n" + footer;
 
             // Fit the panel to the text, so a footer never spills past the background.
             var panel = (RectTransform)text.rectTransform.parent;
             panel.sizeDelta = new Vector2(PanelWidth, text.preferredHeight + 2f * Padding);
+
+            RefreshHelp();
+        }
+
+        private void RefreshHelp()
+        {
+            string? help = HelpVisible ? Help?.Invoke() : null;
+            if (string.IsNullOrEmpty(help))
+            {
+                if (_helpText != null)
+                    _helpText.rectTransform.parent.gameObject.SetActive(false);
+                return;
+            }
+            if (_helpText == null)
+            {
+                RectTransform canvas = DebugPanel.CreateCanvas(transform, "Help Canvas", _helpOffset, 0f,
+                    new Vector2(PanelWidth, 120f), new Vector2(0f, 1f));
+                _helpText = DebugPanel.CreateText(canvas, "Text", _fontSize - 1, TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.85f));
+                DebugPanel.Stretch(_helpText.rectTransform, canvas, Padding);
+            }
+            var helpPanel = (RectTransform)_helpText.rectTransform.parent;
+            helpPanel.gameObject.SetActive(true);
+            _helpText.text = help;
+            helpPanel.sizeDelta = new Vector2(PanelWidth, _helpText.preferredHeight + 2f * Padding);
         }
 
         private IEnumerable<(string, PerceptionChannels)>? ObjectLines()

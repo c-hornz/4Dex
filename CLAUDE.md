@@ -98,7 +98,33 @@ turns the perceived 3D subspace, and `position.w` is unchanged:
 
 Snapshot `-rotXW 90` (any plane) turns the player; `-defaultPerception`
 renders with default tuning, so references don't depend on tuning saved in the
-settings asset. Unity tests: 48/48.
+settings asset.
+
+**Milestone 4 (generalized input mapping)**: the acceptance test passes on the
+desktop. `HeadMappingTests.SameHeadPitch_ThreeConfigurations_NoCodeChange`
+shows that only the selected profile makes head pitch drive ordinary pitch, YW,
+or 70/30. Semantics are in ARCHITECTURE §8a: perceived fraction, delta/steer
+default, eye pivot. Pieces:
+- `src/4Dex.Input4D` (namespace `FourDex.InputMapping`, not `FourDex.Input`,
+  which would shadow `UnityEngine.Input`): `MappingEngine`, `InputBinding`
+  shaping (dead zone, curve, gain, invert, clamp), `MappingPresets` (the six
+  SPEC §6 profiles).
+- Profile assets in `Assets/4Dex/Settings/Mapping/`. The builder creates
+  missing ones and never overwrites tuned ones.
+- `HeadMappingDriver` (on World4D): offsets from a recentred neutral, in the
+  neutral facing. It gives the comfort controls: freeze, disable, return to
+  CLASSIC.
+- Desktop: P profile, X freeze, C recenter, Q/E simulated roll, T/G simulated
+  lean. Backspace also returns to CLASSIC.
+- HUD: `MAPPING` monitor lines (SPEC §20). The key legend and input monitor
+  moved to a separate help panel above the lab (H hides it).
+- Parameter panel: `map:` entries (profile, comfort toggles, W gains,
+  pitch/roll/lean weights, mode and dead zone). It scrolls.
+
+Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
+not been tried in the headset, which is where comfort gets judged.
+
+Unity tests: 54/54.
 
 **Desktop test mode** (`Runtime/Input4D/DesktopTestMode`, on the World4D root):
 the keyboard drives SPEC §7's three operations whether or not a headset is

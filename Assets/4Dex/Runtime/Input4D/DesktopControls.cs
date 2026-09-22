@@ -12,6 +12,9 @@ namespace FourDex.Runtime
         /// <summary>Head look in degrees this frame (yaw right, pitch down). Only used with a simulated head.</summary>
         public Vector2 LookDegrees;
 
+        /// <summary>Simulated head only: roll rate (-1..1) and lean rate (-1..1, + forward), to exercise head mappings.</summary>
+        public float HeadRoll, HeadLean;
+
         /// <summary>Walk: x = strafe right, y = forward. Head-relative, in the player's own 3-space.</summary>
         public Vector2 Walk;
 
@@ -42,6 +45,8 @@ namespace FourDex.Runtime
         [Tooltip("Rotation through the 4D planes, degrees per second.")] public float Rotate;
         [Tooltip("focusW change, W units per second.")] public float Focus;
         [Tooltip("Multiplier while Shift is held.")] public float FastMultiplier;
+        [Tooltip("Simulated head roll, degrees per second.")] public float HeadRoll;
+        [Tooltip("Simulated head lean, metres per second.")] public float HeadLean;
 
         public static DesktopSpeeds Default => new DesktopSpeeds
         {
@@ -50,6 +55,8 @@ namespace FourDex.Runtime
             Rotate = 45f,
             Focus = 0.5f,
             FastMultiplier = 3f,
+            HeadRoll = 40f,
+            HeadLean = 0.25f,
         };
     }
 
@@ -82,6 +89,8 @@ namespace FourDex.Runtime
             float scale = c.Fast ? speeds.FastMultiplier : 1f;
 
             head?.Look(c.LookDegrees.x, c.LookDegrees.y);
+            head?.Tilt(c.HeadRoll * speeds.HeadRoll * dt);
+            head?.LeanBy(c.HeadLean * speeds.HeadLean * dt);
 
             // §7A move. Tracking space is the player's own frame, so a head-relative direction is a local delta.
             if (c.Walk != Vector2.zero)

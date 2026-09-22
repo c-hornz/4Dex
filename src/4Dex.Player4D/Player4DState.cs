@@ -66,6 +66,24 @@ namespace FourDex.Player
         /// <summary>Turn in the player's own planes. Position and focus are unchanged.</summary>
         public void RotateLocal(Rotor4 delta) => Pose = Pose.RotatedLocal(delta);
 
+        /// <summary>
+        /// Turn in the player's own planes about a point other than the origin, e.g. the eye (given in the player's
+        /// local frame). The pivot's 4D position is exactly unchanged; the origin moves to keep it so.
+        /// </summary>
+        /// <remarks>
+        /// Still §7B, not §7A: this is a rotation about a different centre, not a move. Head-driven rotations use the
+        /// eye as pivot so that "the world follows the head" turns about the viewpoint instead of swinging the scene
+        /// around the feet. Note a pivot raised off the floor does move <c>Position.W</c> under YW or ZW rotation:
+        /// the eye stays put, so the floor origin must swing through W.
+        /// </remarks>
+        public void RotateLocalAbout(Rotor4 delta, Vec4 localPivot)
+        {
+            RequireFinite(localPivot, nameof(localPivot));
+            // In local coordinates the step is x -> delta(x - pivot) + pivot. Its offset (pivot - delta(pivot)) is
+            // local to the frame before the turn, so move first, then rotate.
+            Pose = Pose.TranslatedLocal(localPivot - delta.Apply(localPivot)).RotatedLocal(delta);
+        }
+
         public void RotateLocal(Plane4 plane, float angle)
         {
             RequireFinite(angle, nameof(angle));

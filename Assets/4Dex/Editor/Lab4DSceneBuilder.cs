@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using FourDex.InputMapping;
 using FourDex.Math4D;
 using FourDex.Runtime;
 using FourDex.XR;
@@ -27,6 +29,7 @@ namespace FourDex.EditorTools
         public const string ScenePath = "Assets/Scenes/Lab4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
+        private const string MappingFolder = "Assets/4Dex/Settings/Mapping";
 
         private static readonly Color Background = new Color(0.08f, 0.09f, 0.11f);
 
@@ -79,10 +82,17 @@ namespace FourDex.EditorTools
             PerceptionSettings perception = GetOrCreatePerceptionSettings();
             Set(driver, "_perception", perception);
 
+            // SPEC §5/§6 head mapping: the rig's second pose consumer. Starts on CLASSIC, i.e. purely conventional.
+            var mapping = worldGo.AddComponent<HeadMappingDriver>();
+            Set(mapping, "_rig", rig);
+            Set(mapping, "_player", player);
+            SetList(mapping, "_profiles", GetOrCreateMappingProfiles());
+
             var hud = head.AddComponent<CoordinateHUD>();
             Set(hud, "_player", player);
             Set(hud, "_rig", rig);
             Set(hud, "_projection", driver);
+            Set(hud, "_mapping", mapping);
 
             // SPEC §20 W slice viewer (left of the HUD) and §21 parameter panel (right; Tab shows it).
             var sliceViewer = head.AddComponent<WSliceViewer>();
@@ -90,6 +100,7 @@ namespace FourDex.EditorTools
             Set(sliceViewer, "_player", player);
             var panel = head.AddComponent<RuntimeParameterPanel>();
             Set(panel, "_settings", perception);
+            Set(panel, "_mapping", mapping);
 
             // Keyboard 4D controls always; mouse-look head only when no headset is active.
             var desktop = worldGo.AddComponent<DesktopTestMode>();
@@ -98,6 +109,7 @@ namespace FourDex.EditorTools
             Set(desktop, "_hud", hud);
             Set(desktop, "_panel", panel);
             Set(desktop, "_sliceViewer", sliceViewer);
+            Set(desktop, "_mapping", mapping);
 
             // SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.
             var objects = new[]
@@ -166,7 +178,7 @@ namespace FourDex.EditorTools
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
             // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
-                hud.Footer = () => DesktopTestMode.Legend;
+                hud.Help = () => DesktopTestMode.Legend;
             hud.Refresh();
             var sliceViewer = Object.FindAnyObjectByType<WSliceViewer>();
             if (sliceViewer != null)
@@ -267,6 +279,37 @@ namespace FourDex.EditorTools
             AssetDatabase.CreateAsset(settings, PerceptionSettingsPath);
             AssetDatabase.SaveAssets();
             return settings;
+        }
+
+        /// <summary>One asset per SPEC §6 preset. Existing assets are kept as they are: they may hold tuning.</summary>
+        private static List<InputMappingProfile> GetOrCreateMappingProfiles()
+        {
+            Directory.CreateDirectory(MappingFolder);
+            var profiles = new List<InputMappingProfile>();
+            foreach (string name in MappingPresets.Names)
+            {
+                string path = $"{MappingFolder}/{name}.asset";
+                var asset = AssetDatabase.LoadAssetAtPath<InputMappingProfile>(path);
+                if (asset == null)
+                {
+                    asset = ScriptableObject.CreateInstance<InputMappingProfile>();
+                    asset.Profile = MappingPresets.Create(name);
+                    AssetDatabase.CreateAsset(asset, path);
+                }
+                profiles.Add(asset);
+            }
+            AssetDatabase.SaveAssets();
+            return profiles;
+        }
+
+        private static void SetList<T>(Object target, string field, List<T> values) where T : Object
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty list = so.FindProperty(field);
+            list.arraySize = values.Count;
+            for (int i = 0; i < values.Count; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void PutFirstInBuildSettings(string scenePath)
