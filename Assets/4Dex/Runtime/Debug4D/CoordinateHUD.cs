@@ -19,8 +19,8 @@ namespace FourDex.Runtime
         [SerializeField] private Player4D? _player;
         [SerializeField] private XRRig? _rig;
 
-        [Tooltip("Panel centre in the camera's frame, in metres. About 20 degrees below the line of sight: glance down to read it, and it does not cover the lab.")]
-        [SerializeField] private Vector3 _offset = new Vector3(0f, -0.45f, 1.2f);
+        [Tooltip("Top-centre of the panel in the camera's frame, in metres; the panel grows downward from here. About 20 degrees below the line of sight: glance down to read it, and it does not cover the lab.")]
+        [SerializeField] private Vector3 _offset = new Vector3(0f, -0.33f, 1.2f);
 
         [Tooltip("Text refreshes per second. Reformatting every frame allocates for no readable gain.")]
         [SerializeField, Min(1f)] private float _refreshHz = 10f;
@@ -29,12 +29,16 @@ namespace FourDex.Runtime
 
         // 1 canvas unit = 1 mm, so sizes below read as millimetres at the panel.
         private const float MetresPerCanvasUnit = 0.001f;
-        private static readonly Vector2 PanelSize = new Vector2(760f, 250f);
+        private const float PanelWidth = 900f;
+        private const float Padding = 14f;
 
         private Text? _text;
         private float _nextRefresh;
 
         public string CurrentText => _text != null ? _text.text : string.Empty;
+
+        /// <summary>Extra lines under the readout, e.g. the desktop test mode's key legend. Null for none.</summary>
+        public string? Footer { get; set; }
 
         private void Update()
         {
@@ -48,7 +52,12 @@ namespace FourDex.Runtime
         {
             Text text = EnsurePanel();
             HmdPose? head = _rig != null && _rig.HasPose ? _rig.LastPose : (HmdPose?)null;
-            text.text = CoordinateReadout.Format(_player != null ? _player.State : null, head);
+            string readout = CoordinateReadout.Format(_player != null ? _player.State : null, head);
+            text.text = string.IsNullOrEmpty(Footer) ? readout : readout + "\n\n" + Footer;
+
+            // Fit the panel to the text, so a footer never spills past the background.
+            var panel = (RectTransform)text.rectTransform.parent;
+            panel.sizeDelta = new Vector2(PanelWidth, text.preferredHeight + 2f * Padding);
         }
 
         private Text EnsurePanel()
@@ -59,10 +68,11 @@ namespace FourDex.Runtime
             var canvasGo = new GameObject("CoordinateHUD Canvas", typeof(RectTransform));
             var canvasRect = (RectTransform)canvasGo.transform;
             canvasRect.SetParent(transform, false);
+            canvasRect.pivot = new Vector2(0.5f, 1f);
             canvasRect.localPosition = _offset;
             canvasRect.localRotation = Quaternion.identity;
             canvasRect.localScale = Vector3.one * MetresPerCanvasUnit;
-            canvasRect.sizeDelta = PanelSize;
+            canvasRect.sizeDelta = new Vector2(PanelWidth, 250f);
 
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -74,7 +84,7 @@ namespace FourDex.Runtime
             background.raycastTarget = false;
 
             _text = new GameObject("Text", typeof(RectTransform)).AddComponent<Text>();
-            Stretch(_text.rectTransform, canvasRect, 14f);
+            Stretch(_text.rectTransform, canvasRect, Padding);
             _text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             _text.fontSize = _fontSize;
             _text.color = Color.white;

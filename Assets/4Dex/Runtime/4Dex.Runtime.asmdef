@@ -6,7 +6,8 @@
         "4Dex.World4D",
         "4Dex.Player4D",
         "4Dex.XR",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

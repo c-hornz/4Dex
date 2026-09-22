@@ -49,6 +49,14 @@ Change the builder and rerun it rather than hand-editing the scene. Its
 graphics, so omit `-nographics`; pass `-snapshotPath <png>`). Use it to check
 visual changes. `docs/images/lab4d-m0.png` is the reference render.
 
+**Desktop test mode** (`Runtime/Input4D/DesktopTestMode`, on the World4D root):
+the keyboard drives SPEC §7's three operations whether or not a headset is
+connected. When no XR device is active, a `SimulatedHmdPoseSource` (mouse look,
+right-drag) replaces the head through the rig's normal pose-source seam. The key
+legend shows in the HUD. The rules are in the device-free `DesktopControls.Apply`,
+covered by EditMode tests. Only the key-reading code is untested; check it by
+hand in Play mode. Unity tests: 25/25.
+
 Milestone 0 is code-complete. What remains is its acceptance run in the Rift:
 the headset tracks, the scene is stable, and the HUD's HMD line reads
 `tracked`. That needs the user, the headset, and the Oculus app set as the

@@ -79,6 +79,12 @@ namespace FourDex.EditorTools
             Set(hud, "_player", player);
             Set(hud, "_rig", rig);
 
+            // Keyboard 4D controls always; mouse-look head only when no headset is active.
+            var desktop = worldGo.AddComponent<DesktopTestMode>();
+            Set(desktop, "_rig", rig);
+            Set(desktop, "_player", player);
+            Set(desktop, "_hud", hud);
+
             // SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.
             var objects = new[]
             {
@@ -117,6 +123,9 @@ namespace FourDex.EditorTools
 
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
+            // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
+            if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
+                hud.Footer = DesktopTestMode.Legend;
             hud.Refresh();
             Canvas.ForceUpdateCanvases();
 
