@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using FourDex.Perception;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,6 +30,9 @@ namespace FourDex.Runtime
 
         [SerializeField] private float _yawDegrees = -12f;
         [SerializeField, Min(1f)] private float _refreshHz = 20f;
+
+        [Tooltip("Most bars to draw, nearest in W first: a maze has dozens of walls.")]
+        [SerializeField, Min(1)] private int _maxRows = 12;
 
         // Chart geometry in mm.
         private const float Width = 520f;
@@ -86,6 +90,8 @@ namespace FourDex.Runtime
                 return;
 
             IReadOnlyList<Object4DBehaviour> members = _projection.World.Members;
+            if (members.Count > _maxRows)
+                members = members.OrderBy(m => Mathf.Abs(m.LastProjection.W)).Take(_maxRows).ToList();
             PerceptionParameters? p = _projection.Perception != null ? _projection.Perception.Parameters.Validated() : null;
             float focus = _player.State.FocusW;
 
@@ -122,9 +128,12 @@ namespace FourDex.Runtime
         private void UpdateRow(Row row, Object4DBehaviour member, int index)
         {
             float y = Top + index * RowHeight;
+            // "A  w=0 ..." shortens at the double space; anything else is trimmed to fit the narrow label column.
             string name = member.name;
-            int space = name.IndexOf(' ');
-            row.Label.text = space > 0 ? name.Substring(0, space) : name;
+            int doubleSpace = name.IndexOf("  ", System.StringComparison.Ordinal);
+            row.Label.text = doubleSpace > 0 ? name.Substring(0, doubleSpace)
+                : name.Length > 9 ? name.Substring(0, 9)
+                : name;
             DebugPanel.PlaceTopLeft(row.Label.rectTransform, 10f, y, LabelColumn - 10f, RowHeight);
 
             WSliceLayout.Span span = WSliceLayout.Interval(member.LastProjection.W, member.ViewerHalfExtentW, _halfRange);

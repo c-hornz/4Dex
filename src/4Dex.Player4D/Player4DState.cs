@@ -41,11 +41,25 @@ namespace FourDex.Player
 
         // ---- §7A: move ----
 
+        /// <summary>
+        /// Optional constraint on every move: given where the player is and where the move would put them, it returns
+        /// where they actually end up. The maze's wall collision plugs in here, so walking, ana/kata and head-driven
+        /// movement are all constrained the same way, and this class still knows nothing about mazes.
+        /// </summary>
+        public Func<Vec4, Vec4, Vec4>? MovementFilter { get; set; }
+
         /// <summary>Move by a world-space offset, including through world W.</summary>
         public void MoveWorld(Vec4 worldDelta)
         {
             RequireFinite(worldDelta, nameof(worldDelta));
-            Pose = Pose.Translated(worldDelta);
+            MoveTo(Pose.Position + worldDelta);
+        }
+
+        private void MoveTo(Vec4 target)
+        {
+            Vec4 allowed = MovementFilter != null ? MovementFilter(Pose.Position, target) : target;
+            RequireFinite(allowed, nameof(allowed));
+            Pose = Pose.WithPosition(allowed);
         }
 
         /// <summary>
@@ -55,7 +69,7 @@ namespace FourDex.Player
         public void MoveLocal(Vec4 localDelta)
         {
             RequireFinite(localDelta, nameof(localDelta));
-            Pose = Pose.TranslatedLocal(localDelta);
+            MoveTo(Pose.Position + Pose.Rotation.Apply(localDelta));
         }
 
         /// <summary>Move straight ana (<c>+</c>) or kata (<c>-</c>) along world W.</summary>
@@ -74,7 +88,8 @@ namespace FourDex.Player
         /// Still §7B, not §7A: this is a rotation about a different centre, not a move. Head-driven rotations use the
         /// eye as pivot so that "the world follows the head" turns about the viewpoint instead of swinging the scene
         /// around the feet. Note a pivot raised off the floor does move <c>Position.W</c> under YW or ZW rotation:
-        /// the eye stays put, so the floor origin must swing through W.
+        /// the eye stays put, so the floor origin must swing through W. The pivot shift bypasses
+        /// <see cref="MovementFilter"/> on purpose: it is what keeps the pivot fixed, not a move through the world.
         /// </remarks>
         public void RotateLocalAbout(Rotor4 delta, Vec4 localPivot)
         {

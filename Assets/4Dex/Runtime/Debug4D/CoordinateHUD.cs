@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FourDex.Perception;
 using FourDex.Player;
 using FourDex.XR;
@@ -33,6 +34,9 @@ namespace FourDex.Runtime
         [SerializeField, Min(1f)] private float _refreshHz = 10f;
 
         [SerializeField] private int _fontSize = 18;
+
+        [Tooltip("Most object lines to list, nearest in W first. A maze has dozens of walls.")]
+        [SerializeField, Min(1)] private int _maxObjectLines = 8;
 
         [Tooltip("Top-left corner of the help panel (key legend, input monitor), metres in the camera's frame: up and left, clear of the lab.")]
         [SerializeField] private Vector3 _helpOffset = new Vector3(-0.62f, 0.45f, 1.2f);
@@ -124,13 +128,26 @@ namespace FourDex.Runtime
             if (_projection == null || _projection.Perception == null || _projection.World == null)
                 return null;
             var lines = new List<(string, PerceptionChannels, ShadowChannels)>();
-            foreach (Object4DBehaviour member in _projection.World.Members)
+            // A maze has dozens of walls: list the ones nearest in W, which are the ones being perceived, and say
+            // how many were left out rather than filling the panel.
+            IEnumerable<Object4DBehaviour> nearest = _projection.World.Members;
+            int total = _projection.World.Members.Count;
+            if (total > _maxObjectLines)
+                nearest = _projection.World.Members.OrderBy(m => Mathf.Abs(m.WGap)).Take(_maxObjectLines);
+
+            foreach (Object4DBehaviour member in nearest)
             {
-                // First word of the GameObject name: the lab names objects "A  w=0 ...", "B  w=+1 ...".
+                // The lab names objects "A  w=0 ..." with a double space after the label; anything else is just
+                // trimmed to something that fits the column, e.g. the maze's "Wall 0101 PosW".
                 string name = member.name;
-                int space = name.IndexOf(' ');
-                lines.Add((space > 0 ? name.Substring(0, space) : name, member.Channels, member.Shadow));
+                int doubleSpace = name.IndexOf("  ", StringComparison.Ordinal);
+                string label = doubleSpace > 0 ? name.Substring(0, doubleSpace)
+                    : name.Length > 16 ? name.Substring(0, 16)
+                    : name;
+                lines.Add((label, member.Channels, member.Shadow));
             }
+            if (total > lines.Count)
+                lines.Add(($"(+{total - lines.Count} more)", default, default));
             return lines;
         }
 

@@ -88,6 +88,44 @@ namespace FourDex.Tests
         }
 
         [Fact]
+        public void MovementFilter_ConstrainsEveryKindOfMove_ButNotFocusOrOrientation()
+        {
+            // The maze's wall collision plugs in here. A filter that refuses all movement must stop walking,
+            // ana/kata and world moves alike, and must not touch the other two SPEC §7 operations.
+            var player = new Player4DState(new Transform4(new Vec4(1f, 0f, 2f, 0.5f), Rotor4.Identity), 0.25f);
+            player.MovementFilter = (from, _) => from;
+
+            player.MoveWorld(new Vec4(5f, 5f, 5f, 5f));
+            player.MoveLocal(new Vec4(0f, 0f, 3f, 0f));
+            player.MoveAnaKata(2f);
+
+            Assert.Equal(new Vec4(1f, 0f, 2f, 0.5f), player.Position);
+
+            player.RotateLocal(Plane4.XW, 0.4f);
+            player.SetFocusW(1.5f);
+            Assert.Equal(1.5f, player.FocusW);
+            Assert.False(player.Orientation.ApproxEquals(Rotor4.Identity));
+        }
+
+        [Fact]
+        public void MovementFilter_SeesWhereTheMoveWouldHaveGone()
+        {
+            var player = new Player4DState();
+            Vec4 requested = Vec4.Zero;
+            // A filter that allows only half of whatever was asked for.
+            player.MovementFilter = (from, to) =>
+            {
+                requested = to;
+                return from + (to - from) * 0.5f;
+            };
+
+            player.MoveWorld(new Vec4(0f, 0f, 0f, 4f));
+
+            AssertApprox(new Vec4(0f, 0f, 0f, 4f), requested);
+            AssertApprox(new Vec4(0f, 0f, 0f, 2f), player.Position);
+        }
+
+        [Fact]
         public void NonFiniteInput_IsRejected_AndLeavesStateUntouched()
         {
             var player = new Player4DState(Transform4.Identity, 0.5f);

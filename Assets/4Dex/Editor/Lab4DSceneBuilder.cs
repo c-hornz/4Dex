@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using FourDex.InputMapping;
 using FourDex.Math4D;
 using FourDex.Runtime;
+using FourDex.World;
 using FourDex.XR;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -27,14 +28,65 @@ namespace FourDex.EditorTools
     public static class Lab4DSceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Lab4D.unity";
+        public const string CellsScenePath = "Assets/Scenes/Cells4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
         private const string MappingFolder = "Assets/4Dex/Settings/Mapping";
 
         private static readonly Color Background = new Color(0.08f, 0.09f, 0.11f);
 
+        /// <summary>The parts every 4Dex scene has: the rig, the 4D world root and its drivers, and the debug panels.</summary>
+        private readonly struct Common
+        {
+            public Common(GameObject head, GameObject worldRoot, XRRig rig, Player4D player, World4DRegistry registry,
+                ProjectionDriver driver, CoordinateHUD hud, PerceptionSettings perception, Material objectMaterial)
+            {
+                Head = head;
+                WorldRoot = worldRoot;
+                Rig = rig;
+                Player = player;
+                Registry = registry;
+                Driver = driver;
+                Hud = hud;
+                Perception = perception;
+                ObjectMaterial = objectMaterial;
+            }
+
+            public readonly GameObject Head;
+            public readonly GameObject WorldRoot;
+            public readonly XRRig Rig;
+            public readonly Player4D Player;
+            public readonly World4DRegistry Registry;
+            public readonly ProjectionDriver Driver;
+            public readonly CoordinateHUD Hud;
+            public readonly PerceptionSettings Perception;
+            public readonly Material ObjectMaterial;
+        }
+
         [MenuItem("4Dex/Rebuild Lab4D Scene")]
         public static void Build()
+        {
+            (Scene scene, Common common) = CreateCommon();
+            Material objectMaterial = common.ObjectMaterial;
+            GameObject worldGo = common.WorldRoot;
+            World4DRegistry registry = common.Registry;
+            ProjectionDriver driver = common.Driver;
+
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
+            // Plain 3D, not a 4D object: a stable conventional reference for comfort and for judging head tracking.
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor (3D reference, not 4D)";
+            floor.transform.localScale = new Vector3(1f, 1f, 1f); // 10 m x 10 m: room for the shadow field
+            floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
+
+            BuildLabObjects(worldGo, objectMaterial, registry, driver);
+
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            PutFirstInBuildSettings(ScenePath);
+            Debug.Log($"[4Dex] Built {ScenePath}.");
+        }
+
+        private static (Scene Scene, Common Common) CreateCommon()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -49,16 +101,9 @@ namespace FourDex.EditorTools
             // From behind and above the viewer, so the faces the player sees are the lit ones.
             light.transform.rotation = Quaternion.Euler(55f, 25f, 0f); // steep enough that shadows land on the floor, not past it
 
+            // Receivers and casters share one Phase4D material: with no PhaseRenderer it keeps the shader's in-focus
+            // defaults, i.e. ordinary solid geometry that still receives the 4D shadow field.
             Material objectMaterial = GetOrCreateMaterial("LabObject", new Color(0.82f, 0.82f, 0.82f), "4Dex/Phase4D");
-            // The floor uses Phase4D too, so it receives the 4D shadow field. With no PhaseRenderer it keeps the
-            // shader's in-focus defaults, i.e. renders as ordinary solid geometry.
-            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
-
-            // Plain 3D, not a 4D object: a stable conventional reference for comfort and for judging head tracking.
-            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            floor.name = "Floor (3D reference, not 4D)";
-            floor.transform.localScale = new Vector3(1f, 1f, 1f); // 10 m x 10 m: room for the shadow field
-            floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
 
             // Tracking space. The camera's pose is written by XRRig; 1.6 m is only the pre-tracking placeholder.
             var rigGo = new GameObject("XRRig");
@@ -114,7 +159,12 @@ namespace FourDex.EditorTools
             Set(desktop, "_mapping", mapping);
             Set(desktop, "_projection", driver);
 
-            // SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.
+            return (scene, new Common(head, worldGo, rig, player, registry, driver, hud, perception, objectMaterial));
+        }
+
+        /// <summary>SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.</summary>
+        private static void BuildLabObjects(GameObject worldGo, Material objectMaterial, World4DRegistry registry, ProjectionDriver driver)
+        {
             var objects = new[]
             {
                 AddObject(worldGo, "A  w=0  (cube)", PrimitiveType.Cube, objectMaterial,
@@ -139,11 +189,77 @@ namespace FourDex.EditorTools
             driver.ProjectAll();
             foreach (Object4DBehaviour o in objects)
                 registry.Unregister(o);
-
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            PutFirstInBuildSettings(ScenePath);
-            Debug.Log($"[4Dex] Built {ScenePath}.");
         }
+
+        /// <summary>
+        /// Generates <c>Assets/Scenes/Cells4D.unity</c>: Milestone 8's hand-authored 4D cell structure. A 2x1x2x2 grid
+        /// of 3 m cells, fully walled except for a route that can only be completed by going ana and kata.
+        /// </summary>
+        [MenuItem("4Dex/Rebuild Cells4D Scene")]
+        public static void BuildCells()
+        {
+            (Scene scene, Common common) = CreateCommon();
+
+            // The route: +X, then ana to w = 1, then +Z, then kata back to w = 0. The last leg is only reachable
+            // through W, so finishing the loop needs ana/kata, not just ordinary directions (SPEC §24, M8).
+            var openings = new List<CellOpening>
+            {
+                Open(0, 0, 0, 0, Direction4.PosX),
+                Open(1, 0, 0, 0, Direction4.PosW),
+                Open(1, 0, 0, 1, Direction4.PosZ),
+                Open(1, 0, 1, 1, Direction4.NegX),
+                Open(0, 0, 1, 1, Direction4.NegW),
+                // A dead end, so the structure is a small maze rather than one corridor.
+                Open(0, 0, 0, 1, Direction4.PosZ),
+            };
+
+            var maze = common.WorldRoot.AddComponent<MazeRuntime>();
+            Set(maze, "_player", common.Player);
+            Set(maze, "_hud", common.Hud);
+            var mazeObject = new SerializedObject(maze);
+            mazeObject.FindProperty("_size").vector4Value = new Vector4(2f, 1f, 2f, 2f);
+            SerializedProperty list = mazeObject.FindProperty("_openings");
+            list.arraySize = openings.Count;
+            for (int i = 0; i < openings.Count; i++)
+            {
+                SerializedProperty element = list.GetArrayElementAtIndex(i);
+                element.FindPropertyRelative("X").intValue = openings[i].X;
+                element.FindPropertyRelative("Y").intValue = openings[i].Y;
+                element.FindPropertyRelative("Z").intValue = openings[i].Z;
+                element.FindPropertyRelative("W").intValue = openings[i].W;
+                element.FindPropertyRelative("Direction").enumValueIndex = (int)openings[i].Direction;
+            }
+            mazeObject.ApplyModifiedPropertiesWithoutUndo();
+
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor (3D reference, not 4D)";
+            floor.transform.localScale = new Vector3(1.2f, 1f, 1.2f);
+            floor.transform.position = new Vector3(1.5f, 0f, 1.5f); // under the middle of the grid
+            floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
+
+            // Walls are ordinary 4D objects, so a wall one cell away in W is perceived like any other neighbouring
+            // geometry: a dithered echo you can survey, not a special case.
+            var walls = new List<Object4DBehaviour>();
+            foreach ((Cell4D cell, Direction4 direction) in maze.WallFaces())
+            {
+                (Vector4 position, Vector4 half) = maze.WallSlab(cell, direction, 0.2f);
+                walls.Add(AddObject(common.WorldRoot, $"Wall {cell.X}{cell.Y}{cell.Z}{cell.W} {direction}", PrimitiveType.Cube,
+                    common.ObjectMaterial, position, half, default));
+            }
+
+            foreach (Object4DBehaviour wall in walls)
+                common.Registry.Register(wall);
+            common.Driver.ProjectAll();
+            foreach (Object4DBehaviour wall in walls)
+                common.Registry.Unregister(wall);
+
+            EditorSceneManager.SaveScene(scene, CellsScenePath);
+            Debug.Log($"[4Dex] Built {CellsScenePath} with {walls.Count} walls and {openings.Count} openings.");
+        }
+
+        private static CellOpening Open(int x, int y, int z, int w, Direction4 direction) =>
+            new CellOpening { X = x, Y = y, Z = z, W = w, Direction = direction };
 
         /// <summary>
         /// Renders the lab from the XR camera's placeholder pose to a PNG, HUD included, without saving the scene.
@@ -158,7 +274,12 @@ namespace FourDex.EditorTools
             int i = Array.IndexOf(args, "-snapshotPath");
             string path = i >= 0 && i + 1 < args.Length ? args[i + 1] : Path.Combine("Temp", "Lab4D.png");
 
-            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            // -scene Cells4D renders the cell structure instead of the lab.
+            int sceneArg = Array.IndexOf(args, "-scene");
+            string scenePath = sceneArg >= 0 && sceneArg + 1 < args.Length && args[sceneArg + 1].Contains("Cells")
+                ? CellsScenePath
+                : ScenePath;
+            EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
             // Edit mode runs no OnEnable or LateUpdate: register and project by hand, at the requested 4D state.
             var registry = Object.FindAnyObjectByType<World4DRegistry>();
@@ -172,6 +293,7 @@ namespace FourDex.EditorTools
             }
             foreach (Object4DBehaviour o in Object.FindObjectsByType<Object4DBehaviour>().OrderBy(o => o.name))
                 registry.Register(o);
+            player.State.MoveWorld(new Vec4(FloatArg(args, "-playerX", 0f), 0f, FloatArg(args, "-playerZ", 0f), 0f));
             player.State.MoveAnaKata(FloatArg(args, "-playerW", 0f));
             player.State.SetFocusW(FloatArg(args, "-focusW", 0f));
             driver.ForceSurvey(FloatArg(args, "-survey", 0f));

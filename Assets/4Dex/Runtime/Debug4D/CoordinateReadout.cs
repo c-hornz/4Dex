@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -68,6 +69,12 @@ namespace FourDex.Runtime
             {
                 foreach ((string name, PerceptionChannels c, ShadowChannels s) in objects)
                 {
+                    // A name in brackets is a note rather than an object, e.g. "(+22 more)".
+                    if (name.StartsWith("(", StringComparison.Ordinal))
+                    {
+                        sb.Append("  ").Append(name).Append('\n');
+                        continue;
+                    }
                     sb.Append("  ").Append(name.PadRight(3)).Append(" gap ").Append(Num(c.SignedGap))
                       .Append(' ').Append(BandLabel(c.Band))
                       .Append("  V ").Append(c.Visibility.ToString("0.00", CultureInfo.InvariantCulture));

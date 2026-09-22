@@ -170,6 +170,26 @@ shear, all live-tunable (`ShadowRippleTests`,
 - HUD object lines now carry the shadow columns (strength, ring frequency,
   in/out, echo spread): SPEC §20's shadow debug view.
 
+**Milestone 8 (4D cells)**: the acceptance test passes. The player navigates a
+hand-authored cell structure through ordinary directions and ana/kata, and
+walls stop them (`CellCollisionTests`, `MazeRuntimeTests`, renders
+`lab4d-m8-cells-*.png`).
+- `CellCollision` (engine-free): resolves a move axis by axis against
+  `Maze4D`'s faces, so you slide along walls, cannot tunnel at speed, and W is
+  blocked exactly like X/Y/Z.
+- `Player4DState.MovementFilter`: the hook collision plugs into, so walking,
+  ana/kata and head-driven movement are all constrained without the player
+  state knowing about mazes. `RotateLocalAbout`'s pivot shift bypasses it.
+- `MazeRuntime` (on World4D): grid size, cell size, the authored openings, the
+  player radius; it installs the filter, reports the current cell and its exits
+  into the HUD footer, and produces the wall faces.
+- `Assets/Scenes/Cells4D.unity` (menu **4Dex > Rebuild Cells4D Scene**): a
+  2x1x2x2 grid of 3 m cells whose route needs ana and kata. Walls are ordinary
+  4D objects, so a wall one cell away in W is a dithered echo you can survey.
+  Snapshot `-scene Cells4D`, `-playerX/-playerZ`.
+- HUD and W-slice cap their per-object lists (nearest in W, with a "+N more"
+  note), since a maze has dozens of walls.
+
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 
