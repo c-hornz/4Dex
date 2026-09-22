@@ -1,3 +1,4 @@
+using System;
 using FourDex.XR;
 using UnityEngine;
 using UnityEngine.UI;
@@ -37,8 +38,8 @@ namespace FourDex.Runtime
 
         public string CurrentText => _text != null ? _text.text : string.Empty;
 
-        /// <summary>Extra lines under the readout, e.g. the desktop test mode's key legend. Null for none.</summary>
-        public string? Footer { get; set; }
+        /// <summary>Supplies extra lines under the readout at each refresh, e.g. the desktop key legend and input monitor. Null for none.</summary>
+        public Func<string>? Footer { get; set; }
 
         private void Update()
         {
@@ -53,7 +54,8 @@ namespace FourDex.Runtime
             Text text = EnsurePanel();
             HmdPose? head = _rig != null && _rig.HasPose ? _rig.LastPose : (HmdPose?)null;
             string readout = CoordinateReadout.Format(_player != null ? _player.State : null, head);
-            text.text = string.IsNullOrEmpty(Footer) ? readout : readout + "\n\n" + Footer;
+            string? footer = Footer?.Invoke();
+            text.text = string.IsNullOrEmpty(footer) ? readout : readout + "\n\n" + footer;
 
             // Fit the panel to the text, so a footer never spills past the background.
             var panel = (RectTransform)text.rectTransform.parent;

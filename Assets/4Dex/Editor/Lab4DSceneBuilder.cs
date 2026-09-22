@@ -125,7 +125,7 @@ namespace FourDex.EditorTools
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
             // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
-                hud.Footer = DesktopTestMode.Legend;
+                hud.Footer = () => DesktopTestMode.Legend;
             hud.Refresh();
             Canvas.ForceUpdateCanvases();
 

@@ -1,6 +1,8 @@
+using System.Text;
 using FourDex.XR;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.XR;
 
 namespace FourDex.Runtime
@@ -13,6 +15,8 @@ namespace FourDex.Runtime
     /// <remarks>
     /// A development tool, not the input mapping system: SPEC §6's configurable mappings arrive in Milestone 4.
     /// Key choices: each 4D rotation pair sits on one row or column (J/L, U/O, I/K) so its sign is spatial.
+    /// The HUD shows the keys the Input System sees and the commands they produced (a minimal SPEC §20 input
+    /// monitor), so "a key does nothing" can be told apart from "the key never arrived".
     /// </remarks>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-50)] // After XRRig samples (-100), before ProjectionDriver projects (+100).
@@ -44,6 +48,7 @@ namespace FourDex.Runtime
 
         private SimulatedHmdPoseSource? _simulatedHead;
         private IHmdPoseSource? _previousSource;
+        private DesktopCommands _lastCommands;
 
         public bool IsSimulatingHead => _simulatedHead != null;
 
@@ -58,7 +63,7 @@ namespace FourDex.Runtime
                 _rig.PoseSource = _simulatedHead;
             }
             if (_hud != null)
-                _hud.Footer = (IsSimulatingHead ? "" : "(head: real HMD)\n") + Legend;
+                _hud.Footer = BuildFooter;
         }
 
         private void OnDisable()
@@ -76,20 +81,25 @@ namespace FourDex.Runtime
             if (_player == null)
                 return;
 
-            DesktopCommands commands = ReadDevices();
+            _lastCommands = ReadDevices(Keyboard.current, Mouse.current, _simulatedHead != null,
+                _lookSensitivity, _focusWheelStep);
             Quaternion headYaw = _simulatedHead != null
                 ? _simulatedHead.YawRotation
                 : Quaternion.Euler(0f, _rig != null ? _rig.LastPose.Rotation.eulerAngles.y : 0f, 0f);
 
-            DesktopControls.Apply(_player.State, _simulatedHead, headYaw, commands, _speeds, Time.deltaTime,
+            DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
                 _player.ResetToStart);
         }
 
-        private DesktopCommands ReadDevices()
+        // Pulled by the HUD at its own refresh rate, so the monitor costs nothing between refreshes.
+        private string BuildFooter() =>
+            (IsSimulatingHead ? "" : "(head: real HMD)\n") + Legend + "\n" + DescribeInput(Keyboard.current, _lastCommands);
+
+        /// <summary>Turns the current device state into commands. Static so tests can drive it with simulated devices.</summary>
+        /// <param name="readLook">Mouse look applies only while the head is simulated.</param>
+        public static DesktopCommands ReadDevices(Keyboard? k, Mouse? m, bool readLook, float lookSensitivity, float focusWheelStep)
         {
             var c = new DesktopCommands();
-            Keyboard? k = Keyboard.current;
-            Mouse? m = Mouse.current;
 
             if (k != null)
             {
@@ -113,19 +123,70 @@ namespace FourDex.Runtime
             {
                 float wheel = m.scroll.ReadValue().y;
                 if (wheel != 0f)
-                    c.FocusStep = Mathf.Sign(wheel) * _focusWheelStep;
-                if (_simulatedHead != null && m.rightButton.isPressed)
+                    c.FocusStep = Mathf.Sign(wheel) * focusWheelStep;
+                if (readLook && m.rightButton.isPressed)
                 {
                     Vector2 delta = m.delta.ReadValue();
-                    c.LookDegrees = new Vector2(delta.x, -delta.y) * _lookSensitivity;
+                    c.LookDegrees = new Vector2(delta.x, -delta.y) * lookSensitivity;
                 }
             }
 
             return c;
         }
 
-        private static float Axis(UnityEngine.InputSystem.Controls.KeyControl positive,
-            UnityEngine.InputSystem.Controls.KeyControl negative) =>
+        /// <summary>
+        /// Two monitor lines: the keys the Input System reports as held (by their layout name), and the
+        /// nonzero 4D commands they produced this frame.
+        /// </summary>
+        public static string DescribeInput(Keyboard? k, in DesktopCommands c)
+        {
+            var sb = new StringBuilder("KEYS ");
+            int held = 0;
+            if (k != null)
+            {
+                foreach (KeyControl key in k.allKeys)
+                {
+                    if (key == null || !key.isPressed)
+                        continue;
+                    sb.Append(' ').Append(string.IsNullOrEmpty(key.displayName) ? key.name : key.displayName);
+                    held++;
+                }
+            }
+            if (k == null)
+                sb.Append(" (no keyboard)");
+            else if (held == 0)
+                sb.Append(" (none)");
+
+            sb.Append("\nCMD ");
+            int start = sb.Length;
+            AppendIf(sb, "walk", c.Walk.x, c.Walk.y);
+            AppendIf(sb, "anaKata", c.AnaKata);
+            AppendIf(sb, "XW", c.XW);
+            AppendIf(sb, "YW", c.YW);
+            AppendIf(sb, "ZW", c.ZW);
+            AppendIf(sb, "XZ", c.XZ);
+            AppendIf(sb, "focus", c.Focus + c.FocusStep);
+            if (c.Fast) sb.Append("  fast");
+            if (c.ResetView) sb.Append("  RESET view");
+            if (c.ResetAll) sb.Append("  RESET all");
+            if (sb.Length == start)
+                sb.Append(" (none)");
+            return sb.ToString();
+        }
+
+        private static void AppendIf(StringBuilder sb, string label, float value)
+        {
+            if (value != 0f)
+                sb.Append("  ").Append(label).Append(value > 0f ? " +" : " -");
+        }
+
+        private static void AppendIf(StringBuilder sb, string label, float x, float y)
+        {
+            if (x != 0f || y != 0f)
+                sb.Append("  ").Append(label).Append(" (").Append(x.ToString("+0;-0;0")).Append(", ").Append(y.ToString("+0;-0;0")).Append(')');
+        }
+
+        private static float Axis(KeyControl positive, KeyControl negative) =>
             (positive.isPressed ? 1f : 0f) - (negative.isPressed ? 1f : 0f);
     }
 }
