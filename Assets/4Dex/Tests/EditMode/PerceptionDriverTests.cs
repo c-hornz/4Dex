@@ -136,6 +136,34 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void Survey_RevealsHiddenNeighbours_WithSignedCues_AndReleaseRestores()
+        {
+            // Milestone 5 acceptance: neighbouring W geometry becomes perceptible while signed W cues are preserved.
+            Object4DBehaviour ana = AddObject("E", 2f, Thin);
+            Object4DBehaviour kata = AddObject("F", -2f, Thin);
+            Object4DBehaviour local = AddObject("A", 0f, Thin);
+            _driver.ProjectAll();
+            Assert.IsFalse(ana.GetComponent<Renderer>().enabled, "outside normal perception");
+            Assert.IsFalse(kata.GetComponent<Renderer>().enabled);
+
+            _driver.ForceSurvey(1f);
+            _driver.ProjectAll();
+
+            Assert.IsTrue(ana.GetComponent<Renderer>().enabled, "survey must reveal it");
+            Assert.IsTrue(kata.GetComponent<Renderer>().enabled);
+            Assert.Greater(ana.Channels.Density, 0f);
+            Assert.Greater(ana.Channels.PhaseVelocity, 0f, "ana still reads as ana");
+            Assert.Less(kata.Channels.PhaseVelocity, 0f, "kata still reads as kata");
+            Assert.Less(ana.Channels.Coherence, 0.1f, "an echo, not local: it keeps shimmering");
+            Assert.AreEqual(1f, local.Channels.Coherence, 1e-6f, "the local slice is unaffected");
+            Assert.AreEqual(0f, _player.State.FocusW, "survey is perception only; focus does not move");
+
+            _driver.ForceSurvey(0f);
+            _driver.ProjectAll();
+            Assert.IsFalse(ana.GetComponent<Renderer>().enabled, "releasing survey restores normal focus behaviour");
+        }
+
+        [Test]
         public void WithoutSettings_ObjectsArePlacedButNotPerceptionRendered()
         {
             var so = new SerializedObject(_driver);

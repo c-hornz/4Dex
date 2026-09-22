@@ -67,6 +67,15 @@ namespace FourDex.Perception
         /// <summary>|W gap| at which the ana/kata tint reaches full strength.</summary>
         public float TintSaturationW = 1f;
 
+        /// <summary>SPEC §10 survey: focus width at full survey. Wider than <see cref="FocusWidth"/>.</summary>
+        public float SurveyWidth = 1.2f;
+
+        /// <summary>At full survey, bands B and C are multiplied by this, so OUTSIDE geometry comes back as FAR_W.</summary>
+        public float SurveyBandScale = 2f;
+
+        /// <summary>Seconds to ramp survey fully in or out, so engaging it is a transition rather than a pop.</summary>
+        public float SurveyRampSeconds = 0.25f;
+
         /// <summary>A copy with thresholds ordered and widths positive, so a bad inspector value degrades rather than breaks.</summary>
         public PerceptionParameters Validated()
         {
@@ -79,6 +88,9 @@ namespace FourDex.Perception
             p.FarDensity = Clamp01(p.FarDensity);
             p.TintSaturationW = MathF.Max(p.TintSaturationW, 1e-4f);
             p.PhaseAmplitude = Clamp01(p.PhaseAmplitude);
+            p.SurveyWidth = MathF.Max(p.SurveyWidth, 1e-4f);
+            p.SurveyBandScale = MathF.Max(p.SurveyBandScale, 1f);
+            p.SurveyRampSeconds = MathF.Max(p.SurveyRampSeconds, 0f);
             return p;
         }
 
@@ -152,10 +164,12 @@ namespace FourDex.Perception
             return outside <= 0f ? 0f : MathF.Sign(d) * outside;
         }
 
-        public static float Visibility(float absGap, PerceptionParameters p)
+        public static float Visibility(float absGap, PerceptionParameters p) => Visibility(absGap, p.Curve, p.FocusWidth);
+
+        public static float Visibility(float absGap, VisibilityCurve curve, float focusWidth)
         {
-            float x = absGap / p.FocusWidth;
-            switch (p.Curve)
+            float x = absGap / MathF.Max(focusWidth, 1e-4f);
+            switch (curve)
             {
                 case VisibilityCurve.Linear:
                     return PerceptionParameters.Clamp01(1f - x);
@@ -169,25 +183,51 @@ namespace FourDex.Perception
             }
         }
 
-        public static OcclusionBand Classify(float absGap, PerceptionParameters p) =>
-            absGap < p.BandA ? OcclusionBand.Local :
-            absGap < p.BandB ? OcclusionBand.NearW :
-            absGap < p.BandC ? OcclusionBand.FarW :
+        public static OcclusionBand Classify(float absGap, PerceptionParameters p) => Classify(absGap, p.BandA, p.BandB, p.BandC);
+
+        public static OcclusionBand Classify(float absGap, float a, float b, float c) =>
+            absGap < a ? OcclusionBand.Local :
+            absGap < b ? OcclusionBand.NearW :
+            absGap < c ? OcclusionBand.FarW :
             OcclusionBand.Outside;
 
+        /// <summary>
+        /// Band thresholds at a survey amount (0 normal, 1 full survey). B and C widen by
+        /// <see cref="PerceptionParameters.SurveyBandScale"/>; A does not, so nothing becomes LOCAL just by surveying.
+        /// </summary>
+        public static (float A, float B, float C) Bands(PerceptionParameters p, float survey)
+        {
+            float scale = 1f + (p.SurveyBandScale - 1f) * PerceptionParameters.Clamp01(survey);
+            float b = MathF.Max(p.BandB * scale, p.BandA);
+            return (p.BandA, b, MathF.Max(p.BandC * scale, b));
+        }
+
+        /// <summary>Focus width at a survey amount: lerps to <see cref="PerceptionParameters.SurveyWidth"/>.</summary>
+        public static float FocusWidthAt(PerceptionParameters p, float survey) =>
+            p.FocusWidth + (p.SurveyWidth - p.FocusWidth) * PerceptionParameters.Clamp01(survey);
+
         /// <param name="p">Expected already <see cref="PerceptionParameters.Validated"/>; call that once per frame, not per object.</param>
-        public static PerceptionChannels Evaluate(float signedGap, PerceptionParameters p)
+        /// <param name="survey">
+        /// SPEC §10 survey amount, 0 (normal) to 1 (full). It widens visibility, density and the bands, so neighbouring
+        /// W geometry becomes perceptible. Coherence and phase amplitude stay tied to normal focus, and the sign channels
+        /// are untouched: a surveyed neighbour reads as a shimmering echo on its own ana or kata side, never as local.
+        /// </param>
+        public static PerceptionChannels Evaluate(float signedGap, PerceptionParameters p, float survey = 0f)
         {
             float abs = MathF.Abs(signedGap);
-            float v = Visibility(abs, p);
-            OcclusionBand band = Classify(abs, p);
+            // Focus error as it really is: drives coherence and phase, which survey must not fake.
+            float vFocus = Visibility(abs, p);
+            // What survey lets you see.
+            float v = survey > 0f ? Visibility(abs, p.Curve, FocusWidthAt(p, survey)) : vFocus;
+            (float bandA, float bandB, float bandC) = survey > 0f ? Bands(p, survey) : (p.BandA, p.BandB, p.BandC);
+            OcclusionBand band = Classify(abs, bandA, bandB, bandC);
 
             float density = band switch
             {
                 OcclusionBand.Local => 1f,
                 OcclusionBand.NearW => p.NearMinDensity + (1f - p.NearMinDensity) * v,
                 // Fades to nothing at C, so crossing into OUTSIDE is continuous rather than a pop.
-                OcclusionBand.FarW => p.FarDensity * (p.BandC > p.BandB ? 1f - (abs - p.BandB) / (p.BandC - p.BandB) : 0f),
+                OcclusionBand.FarW => p.FarDensity * (bandC > bandB ? 1f - (abs - bandB) / (bandC - bandB) : 0f),
                 _ => 0f,
             };
 
@@ -200,10 +240,10 @@ namespace FourDex.Perception
                 signedGap,
                 v,
                 density,
-                coherence: v,
+                coherence: vFocus,
                 phaseFrequency: p.PhaseBaseFrequency + p.PhaseFrequencyPerW * abs,
                 phaseVelocity: direction * p.PhaseVelocity,
-                phaseAmplitude: p.PhaseAmplitude * (1f - v),
+                phaseAmplitude: p.PhaseAmplitude * (1f - vFocus),
                 tint: sign * PerceptionParameters.Clamp01(abs / p.TintSaturationW),
                 edgeWeight: band == OcclusionBand.FarW ? 1f : 0f);
         }

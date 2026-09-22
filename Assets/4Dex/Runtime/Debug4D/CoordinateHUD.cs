@@ -71,8 +71,10 @@ namespace FourDex.Runtime
         {
             Text text = EnsurePanel();
             HmdPose? head = _rig != null && _rig.HasPose ? _rig.LastPose : (HmdPose?)null;
+            float survey = _projection != null ? _projection.SurveyAmount : 0f;
+            // The effective width: during survey it is the widened one the objects are being rendered with.
             float? focusWidth = _projection != null && _projection.Perception != null
-                ? _projection.Perception.Parameters.FocusWidth
+                ? PerceptionModel.FocusWidthAt(_projection.Perception.Parameters.Validated(), survey)
                 : (float?)null;
             Player4DState? state = _player != null ? _player.State : null;
             if (state != null)
@@ -82,7 +84,7 @@ namespace FourDex.Runtime
                 _rotation.Sample(state.Orientation, _lastSampleTime < 0f ? 0f : now - _lastSampleTime);
                 _lastSampleTime = now;
             }
-            string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null);
+            string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null, survey);
             if (_mapping != null)
                 readout += "\n" + MappingReadout.Format(_mapping.ActiveName, _mapping.MappingEnabled, _mapping.Frozen, _mapping.Contributions);
             string? footer = Footer?.Invoke();

@@ -121,6 +121,21 @@ default, eye pivot. Pieces:
 - Parameter panel: `map:` entries (profile, comfort toggles, W gains,
   pitch/roll/lean weights, mode and dead zone). It scrolls.
 
+**Milestone 5 (survey mode)**: the acceptance test passes. Hold Space and
+neighbouring W geometry becomes perceptible, with signed cues preserved:
+`PerceptionDriverTests.Survey_*`, `SurveyTests`, and
+`lab4d-m5-survey-off/on.png`. Survey is one more input to the same
+`PerceptionModel.Evaluate`:
+- Survey widens visibility, density and bands B/C (`SurveyWidth`,
+  `SurveyBandScale`). Band A stays fixed, so nothing becomes LOCAL by
+  surveying.
+- Coherence and phase amplitude stay tied to real focus, so surveyed
+  neighbours read as shimmering echoes, not local geometry. The sign channels
+  are untouched.
+- `SurveyRamp` eases it in and out (`SurveyRampSeconds`).
+- The lab gained E/F at w = ±2, OUTSIDE normally, for survey to reveal.
+- Snapshot `-survey 1`.
+
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 

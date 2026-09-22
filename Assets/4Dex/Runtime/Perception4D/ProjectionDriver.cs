@@ -28,12 +28,31 @@ namespace FourDex.Runtime
         [SerializeField] private PerceptionSettings? _perception;
 
         private readonly IProjection4 _projection = new SliceProjection();
+        private readonly SurveyRamp _survey = new SurveyRamp();
+
+        /// <summary>SPEC §10: hold to survey. Ramps in and out over PerceptionParameters.SurveyRampSeconds.</summary>
+        public bool SurveyEngaged
+        {
+            get => _survey.Engaged;
+            set => _survey.Engaged = value;
+        }
+
+        /// <summary>Current survey amount, 0 normal to 1 full, as given to the perception model.</summary>
+        public float SurveyAmount => _survey.Amount;
+
+        /// <summary>Set the survey amount immediately, bypassing the ramp: for snapshots and tests.</summary>
+        public void ForceSurvey(float amount) => _survey.Force(amount);
 
         public PerceptionSettings? Perception => _perception;
 
         public World4DRegistry? World => _world;
 
-        private void LateUpdate() => ProjectAll();
+        private void LateUpdate()
+        {
+            if (_perception != null)
+                _survey.Update(Time.deltaTime, _perception.Parameters.SurveyRampSeconds);
+            ProjectAll();
+        }
 
         public void ProjectAll()
         {
@@ -65,7 +84,7 @@ namespace FourDex.Runtime
                 member.WGap = PerceptionModel.SignedGap(p.W, halfExtentW, focusW);
                 if (parameters != null)
                 {
-                    member.Channels = PerceptionModel.Evaluate(member.WGap, parameters);
+                    member.Channels = PerceptionModel.Evaluate(member.WGap, parameters, _survey.Amount);
                     if (member.Phase != null)
                         member.Phase.Apply(member.Channels, _perception!.MaxShimmerHz);
                 }

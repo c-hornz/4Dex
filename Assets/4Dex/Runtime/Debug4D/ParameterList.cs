@@ -79,6 +79,9 @@ namespace FourDex.Runtime
                 ParameterEntry.Toggle("invert phase dir", () => P().InvertPhaseDirection, v => { P().InvertPhaseDirection = v; Changed(); }),
                 ParameterEntry.Float("tint strength", () => s.TintStrength, v => { s.TintStrength = v; Changed(); }, 0.05f, 0f, 1f),
                 ParameterEntry.Float("tint saturation W", () => P().TintSaturationW, v => { P().TintSaturationW = v; Changed(); }, 0.05f, 0.05f, 5f),
+                ParameterEntry.Float("survey width", () => P().SurveyWidth, v => { P().SurveyWidth = v; Changed(); }, 0.05f, 0.05f, 5f),
+                ParameterEntry.Float("survey band scale", () => P().SurveyBandScale, v => { P().SurveyBandScale = v; Changed(); }, 0.1f, 1f, 6f),
+                ParameterEntry.Float("survey ramp s", () => P().SurveyRampSeconds, v => { P().SurveyRampSeconds = v; Changed(); }, 0.05f, 0f, 3f),
                 ParameterEntry.Float("max shimmer Hz", () => s.MaxShimmerHz, v => { s.MaxShimmerHz = v; Changed(); }, 1f, 0f, 60f, "0"),
                 ParameterEntry.Float("dither cells / m", () => s.DitherCellsPerMetre, v => { s.DitherCellsPerMetre = v; Changed(); }, 5f, 10f, 400f, "0"),
             };

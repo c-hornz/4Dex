@@ -31,7 +31,7 @@ namespace FourDex.Runtime
 
         public const string Legend =
             "MOVE  WASD walk   R / F ana / kata   Shift fast      HEAD  RMB-drag look   Q / E roll   T / G lean\n" +
-            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel\n" +
+            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel   SURVEY  hold Space\n" +
             "MAPPING  P profile   X freeze   C recenter      PANELS  Tab parameters   V W-slice   H this help\n" +
             "RESET  Backspace view + focus + CLASSIC mapping   Shift+Backspace everything";
 
@@ -41,6 +41,7 @@ namespace FourDex.Runtime
         [SerializeField] private RuntimeParameterPanel? _panel;
         [SerializeField] private WSliceViewer? _sliceViewer;
         [SerializeField] private HeadMappingDriver? _mapping;
+        [SerializeField] private ProjectionDriver? _projection;
         [SerializeField] private HeadMode _headMode = HeadMode.Auto;
         [SerializeField] private DesktopSpeeds _speeds = DesktopSpeeds.Default;
 
@@ -99,6 +100,9 @@ namespace FourDex.Runtime
                 _mapping.ReturnToConventional();
 
             DriveMapping(Keyboard.current, _mapping);
+            // SPEC §10: survey is temporary by design, so it is held, not toggled.
+            if (_projection != null)
+                _projection.SurveyEngaged = Keyboard.current != null && Keyboard.current.spaceKey.isPressed;
             if (_hud != null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
                 _hud.HelpVisible = !_hud.HelpVisible;
 

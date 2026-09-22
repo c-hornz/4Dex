@@ -98,11 +98,13 @@ namespace FourDex.Runtime
             _canvas.sizeDelta = new Vector2(Width, Top + plotHeight + AxisHeight);
 
             // Bands around focus: the chart shows *why* each object renders as it does.
+            // Survey widens B and C, so the shading shows survey reaching further into ana and kata.
             if (p != null)
             {
-                PlaceSpan(_bandFar!, WSliceLayout.Interval(focus, p.BandC, _halfRange), plotHeight);
-                PlaceSpan(_bandNear!, WSliceLayout.Interval(focus, p.BandB, _halfRange), plotHeight);
-                PlaceSpan(_bandLocal!, WSliceLayout.Interval(focus, p.BandA, _halfRange), plotHeight);
+                (float a, float b, float c) = PerceptionModel.Bands(p, _projection.SurveyAmount);
+                PlaceSpan(_bandFar!, WSliceLayout.Interval(focus, c, _halfRange), plotHeight);
+                PlaceSpan(_bandNear!, WSliceLayout.Interval(focus, b, _halfRange), plotHeight);
+                PlaceSpan(_bandLocal!, WSliceLayout.Interval(focus, a, _halfRange), plotHeight);
             }
             _bandFar!.enabled = _bandNear!.enabled = _bandLocal!.enabled = p != null;
 

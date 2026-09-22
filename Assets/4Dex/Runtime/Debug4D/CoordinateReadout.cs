@@ -21,7 +21,8 @@ namespace FourDex.Runtime
         /// <param name="objects">Optional per-object perception state, one line each: the M1 check that focus picks the right object.</param>
         /// <param name="rotation">Optional SPEC §20 rotation monitor: orientation as plane angles, and per-plane rate.</param>
         public static string Format(Player4DState? player, HmdPose? head, float? focusWidth = null,
-            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null, RotationMonitor? rotation = null)
+            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null, RotationMonitor? rotation = null,
+            float survey = 0f)
         {
             var sb = new StringBuilder(512);
 
@@ -39,8 +40,10 @@ namespace FourDex.Runtime
 
                 sb.Append("FOCUS  focusW ").Append(Num(player.FocusW))
                   .Append(' ').Append(FocusSide(player.FocusW))
-                  .Append("   focusWidth ").Append(focusWidth.HasValue ? Num(focusWidth.Value) : "n/a")
-                  .Append('\n');
+                  .Append("   focusWidth ").Append(focusWidth.HasValue ? Num(focusWidth.Value) : "n/a");
+                if (survey > 0f)
+                    sb.Append("   SURVEY ").Append(survey.ToString("0.00", CultureInfo.InvariantCulture));
+                sb.Append('\n');
 
                 // Where each of the player's own axes points in world coordinates. W' is "ana" as the player sees it.
                 Basis4 b = player.Orientation.ToBasis();

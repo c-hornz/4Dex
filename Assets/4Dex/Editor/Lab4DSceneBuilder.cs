@@ -110,6 +110,7 @@ namespace FourDex.EditorTools
             Set(desktop, "_panel", panel);
             Set(desktop, "_sliceViewer", sliceViewer);
             Set(desktop, "_mapping", mapping);
+            Set(desktop, "_projection", driver);
 
             // SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.
             var objects = new[]
@@ -123,6 +124,11 @@ namespace FourDex.EditorTools
                 // Spans W from -1.5 to +1.5, so it stays in any slice the player reaches while exploring ana/kata.
                 AddObject(worldGo, "D  spans W -1.5..+1.5  (slab)", PrimitiveType.Cube, objectMaterial,
                     new Vector4(0f, 1.05f, 2.4f, 0f), new Vector4(0.9f, 0.04f, 0.25f, 1.5f), default),
+                // Beyond band C from w = 0: OUTSIDE normally, so they are what survey mode (SPEC §10) reveals.
+                AddObject(worldGo, "E  w=+2 ana, survey  (sphere)", PrimitiveType.Sphere, objectMaterial,
+                    new Vector4(0.35f, 1.9f, 2.3f, 2f), new Vector4(0.12f, 0.12f, 0.12f, 0.2f), default),
+                AddObject(worldGo, "F  w=-2 kata, survey  (cube)", PrimitiveType.Cube, objectMaterial,
+                    new Vector4(-0.35f, 1.9f, 2.3f, -2f), new Vector4(0.1f, 0.1f, 0.1f, 0.2f), default),
             };
 
             // Place everything once now so the scene view shows the real layout; play mode re-registers on enable.
@@ -166,6 +172,7 @@ namespace FourDex.EditorTools
                 registry.Register(o);
             player.State.MoveAnaKata(FloatArg(args, "-playerW", 0f));
             player.State.SetFocusW(FloatArg(args, "-focusW", 0f));
+            driver.ForceSurvey(FloatArg(args, "-survey", 0f));
             // -rotXW 90 etc.: turn the player in its own planes, in degrees, applied in the listed order.
             foreach (Plane4 plane in Plane4Extensions.All)
             {
