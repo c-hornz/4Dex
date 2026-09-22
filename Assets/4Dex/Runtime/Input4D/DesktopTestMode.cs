@@ -94,33 +94,35 @@ namespace FourDex.Runtime
             DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
                 _player.ResetToStart);
 
-            DrivePanels(Keyboard.current);
+            DrivePanels(Keyboard.current, _panel, _sliceViewer, _repeat, Time.unscaledTime);
         }
 
-        // Panel keys are separate from the 4D commands: they change what is shown or tuned, never the player state.
-        private void DrivePanels(Keyboard? k)
+        /// <summary>
+        /// Panel keys, separate from the 4D commands: they change what is shown or tuned, never the player state.
+        /// Static so tests can drive it with a simulated keyboard.
+        /// </summary>
+        public static void DrivePanels(Keyboard? k, RuntimeParameterPanel? panel, WSliceViewer? viewer, KeyRepeat repeat, float now)
         {
             if (k == null)
                 return;
-            if (_sliceViewer != null && k.vKey.wasPressedThisFrame)
-                _sliceViewer.Visible = !_sliceViewer.Visible;
-            if (_panel == null)
+            if (viewer != null && k.vKey.wasPressedThisFrame)
+                viewer.Visible = !viewer.Visible;
+            if (panel == null)
                 return;
             if (k.tabKey.wasPressedThisFrame)
-                _panel.Toggle();
-            if (!_panel.Visible)
+                panel.Toggle();
+            if (!panel.Visible)
                 return;
 
-            float now = Time.unscaledTime;
             bool coarse = k.shiftKey.isPressed;
-            if (_repeat.Fired(k.downArrowKey, now)) _panel.MoveSelection(+1);
-            if (_repeat.Fired(k.upArrowKey, now)) _panel.MoveSelection(-1);
-            if (_repeat.Fired(k.equalsKey, now)) _panel.Adjust(+1, coarse);
-            if (_repeat.Fired(k.minusKey, now)) _panel.Adjust(-1, coarse);
+            if (repeat.Fired(k.downArrowKey, now)) panel.MoveSelection(+1);
+            if (repeat.Fired(k.upArrowKey, now)) panel.MoveSelection(-1);
+            if (repeat.Fired(k.equalsKey, now)) panel.Adjust(+1, coarse);
+            if (repeat.Fired(k.minusKey, now)) panel.Adjust(-1, coarse);
         }
 
         /// <summary>Press fires once; holding fires again after a pause, then steadily, like a text cursor.</summary>
-        private sealed class KeyRepeat
+        public sealed class KeyRepeat
         {
             private const float Delay = 0.35f;
             private const float Interval = 0.06f;

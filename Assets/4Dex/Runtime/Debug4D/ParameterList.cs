@@ -56,27 +56,29 @@ namespace FourDex.Runtime
     {
         public static List<ParameterEntry> For(PerceptionSettings s)
         {
-            PerceptionParameters p = s.Parameters;
+            // Read s.Parameters on every access, never a copy of the reference: Unity may replace that object when the
+            // asset is edited in the inspector, and a stale reference would edit an orphan the scene never reads.
+            PerceptionParameters P() => s.Parameters;
             // Every set marks the asset dirty so an edit in play mode is saved with the project: tuned values persist.
             void Changed() => MarkDirty(s);
 
             return new List<ParameterEntry>
             {
-                ParameterEntry.Float("focusWidth", () => p.FocusWidth, v => { p.FocusWidth = v; Changed(); }, 0.01f, 0.01f, 5f),
-                ParameterEntry.Cycle("curve", () => p.Curve, v => { p.Curve = v; Changed(); }),
-                ParameterEntry.Float("band A (LOCAL)", () => p.BandA, v => { p.BandA = v; Changed(); }, 0.01f, 0f, 5f),
-                ParameterEntry.Float("band B (NEAR_W)", () => p.BandB, v => { p.BandB = v; Changed(); }, 0.01f, 0f, 5f),
-                ParameterEntry.Float("band C (FAR_W)", () => p.BandC, v => { p.BandC = v; Changed(); }, 0.01f, 0f, 5f),
-                ParameterEntry.Float("near min density", () => p.NearMinDensity, v => { p.NearMinDensity = v; Changed(); }, 0.01f, 0f, 1f),
-                ParameterEntry.Float("far density", () => p.FarDensity, v => { p.FarDensity = v; Changed(); }, 0.01f, 0f, 1f),
+                ParameterEntry.Float("focusWidth", () => P().FocusWidth, v => { P().FocusWidth = v; Changed(); }, 0.01f, 0.01f, 5f),
+                ParameterEntry.Cycle("curve", () => P().Curve, v => { P().Curve = v; Changed(); }),
+                ParameterEntry.Float("band A (LOCAL)", () => P().BandA, v => { P().BandA = v; Changed(); }, 0.01f, 0f, 5f),
+                ParameterEntry.Float("band B (NEAR_W)", () => P().BandB, v => { P().BandB = v; Changed(); }, 0.01f, 0f, 5f),
+                ParameterEntry.Float("band C (FAR_W)", () => P().BandC, v => { P().BandC = v; Changed(); }, 0.01f, 0f, 5f),
+                ParameterEntry.Float("near min density", () => P().NearMinDensity, v => { P().NearMinDensity = v; Changed(); }, 0.01f, 0f, 1f),
+                ParameterEntry.Float("far density", () => P().FarDensity, v => { P().FarDensity = v; Changed(); }, 0.01f, 0f, 1f),
                 ParameterEntry.Float("far face fill", () => s.FarFaceFill, v => { s.FarFaceFill = v; Changed(); }, 0.01f, 0f, 1f),
-                ParameterEntry.Float("phase base freq", () => p.PhaseBaseFrequency, v => { p.PhaseBaseFrequency = v; Changed(); }, 0.1f, 0f, 20f),
-                ParameterEntry.Float("phase freq per W", () => p.PhaseFrequencyPerW, v => { p.PhaseFrequencyPerW = v; Changed(); }, 0.25f, 0f, 40f),
-                ParameterEntry.Float("phase velocity", () => p.PhaseVelocity, v => { p.PhaseVelocity = v; Changed(); }, 0.05f, 0f, 5f),
-                ParameterEntry.Float("phase amplitude", () => p.PhaseAmplitude, v => { p.PhaseAmplitude = v; Changed(); }, 0.01f, 0f, 1f),
-                ParameterEntry.Toggle("invert phase dir", () => p.InvertPhaseDirection, v => { p.InvertPhaseDirection = v; Changed(); }),
+                ParameterEntry.Float("phase base freq", () => P().PhaseBaseFrequency, v => { P().PhaseBaseFrequency = v; Changed(); }, 0.1f, 0f, 20f),
+                ParameterEntry.Float("phase freq per W", () => P().PhaseFrequencyPerW, v => { P().PhaseFrequencyPerW = v; Changed(); }, 0.25f, 0f, 40f),
+                ParameterEntry.Float("phase velocity", () => P().PhaseVelocity, v => { P().PhaseVelocity = v; Changed(); }, 0.05f, 0f, 5f),
+                ParameterEntry.Float("phase amplitude", () => P().PhaseAmplitude, v => { P().PhaseAmplitude = v; Changed(); }, 0.01f, 0f, 1f),
+                ParameterEntry.Toggle("invert phase dir", () => P().InvertPhaseDirection, v => { P().InvertPhaseDirection = v; Changed(); }),
                 ParameterEntry.Float("tint strength", () => s.TintStrength, v => { s.TintStrength = v; Changed(); }, 0.05f, 0f, 1f),
-                ParameterEntry.Float("tint saturation W", () => p.TintSaturationW, v => { p.TintSaturationW = v; Changed(); }, 0.05f, 0.05f, 5f),
+                ParameterEntry.Float("tint saturation W", () => P().TintSaturationW, v => { P().TintSaturationW = v; Changed(); }, 0.05f, 0.05f, 5f),
                 ParameterEntry.Float("max shimmer Hz", () => s.MaxShimmerHz, v => { s.MaxShimmerHz = v; Changed(); }, 1f, 0f, 60f, "0"),
                 ParameterEntry.Float("dither cells / m", () => s.DitherCellsPerMetre, v => { s.DitherCellsPerMetre = v; Changed(); }, 5f, 10f, 400f, "0"),
             };

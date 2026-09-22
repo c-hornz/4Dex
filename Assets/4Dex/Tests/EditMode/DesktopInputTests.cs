@@ -1,5 +1,6 @@
 using System;
 using FourDex.Runtime;
+using FourDex.Perception;
 using NUnit.Framework;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -73,6 +74,69 @@ namespace FourDex.Tests.EditMode
 
             StringAssert.Contains("KEYS  R", text);
             StringAssert.Contains("anaKata +", text);
+        }
+
+        private void Tap(KeyControl key, RuntimeParameterPanel panel, WSliceViewer viewer, DesktopTestMode.KeyRepeat repeat, float now)
+        {
+            Press(key);
+            DesktopTestMode.DrivePanels(_keyboard, panel, viewer, repeat, now);
+            Release(key);
+        }
+
+        [Test]
+        public void PanelKeys_ShowSelectAndEdit_AndVTogglesTheSliceViewer()
+        {
+            var settings = UnityEngine.ScriptableObject.CreateInstance<PerceptionSettings>();
+            var camera = new UnityEngine.GameObject("Camera", typeof(UnityEngine.Camera));
+            try
+            {
+                var panel = camera.AddComponent<RuntimeParameterPanel>();
+                var viewer = camera.AddComponent<WSliceViewer>();
+                var so = new UnityEditor.SerializedObject(panel);
+                so.FindProperty("_settings").objectReferenceValue = settings;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                var repeat = new DesktopTestMode.KeyRepeat();
+                float width = settings.Parameters.FocusWidth;
+
+                // Hidden panel ignores edit keys.
+                Tap(_keyboard.equalsKey, panel, viewer, repeat, 0f);
+                Assert.AreEqual(width, settings.Parameters.FocusWidth);
+
+                Tap(_keyboard.tabKey, panel, viewer, repeat, 1f);
+                Assert.IsTrue(panel.Visible);
+
+                Tap(_keyboard.equalsKey, panel, viewer, repeat, 2f);
+                Assert.AreEqual(width + 0.01f, settings.Parameters.FocusWidth, 1e-5f, "= must raise the selected value");
+                Tap(_keyboard.minusKey, panel, viewer, repeat, 3f);
+                Assert.AreEqual(width, settings.Parameters.FocusWidth, 1e-5f);
+
+                Tap(_keyboard.downArrowKey, panel, viewer, repeat, 4f);
+                Assert.AreEqual(1, panel.Selected);
+
+                Assert.IsTrue(viewer.Visible);
+                Tap(_keyboard.vKey, panel, viewer, repeat, 5f);
+                Assert.IsFalse(viewer.Visible);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(camera);
+                UnityEngine.Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Test]
+        public void KeyRepeat_FiresOnPress_ThenAfterADelay_ThenSteadily()
+        {
+            var repeat = new DesktopTestMode.KeyRepeat();
+            Press(_keyboard.equalsKey);
+            Assert.IsTrue(repeat.Fired(_keyboard.equalsKey, 10f), "press fires");
+            InputSystem.Update(); // next frame: still held, no longer "pressed this frame"
+            Assert.IsFalse(repeat.Fired(_keyboard.equalsKey, 10.1f), "no repeat before the delay");
+            Assert.IsTrue(repeat.Fired(_keyboard.equalsKey, 10.4f), "repeats after the delay");
+            Assert.IsFalse(repeat.Fired(_keyboard.equalsKey, 10.42f));
+            Assert.IsTrue(repeat.Fired(_keyboard.equalsKey, 10.47f), "then steadily");
+            Release(_keyboard.equalsKey);
+            Assert.IsFalse(repeat.Fired(_keyboard.equalsKey, 11f));
         }
 
         [Test]
