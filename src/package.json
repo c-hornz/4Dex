@@ -1,0 +1,7 @@
+{
+  "name": "com.fourdex.core",
+  "version": "0.1.0",
+  "displayName": "4Dex Core (Math4D, World4D)",
+  "description": "Engine-independent 4D mathematics and world state. The same sources build outside Unity via 4Dex.Core.sln and are tested there.",
+  "unity": "6000.6"
+}

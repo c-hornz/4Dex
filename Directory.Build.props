@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    Build output goes to artifacts/ at the repo root instead of bin/ and obj/ beside the sources.
+    src/ is also a Unity local package (src/package.json), and Unity compiles every .cs under it:
+    left in place, obj/'s generated AssemblyInfo.cs files would be compiled into the Unity assemblies too.
+  -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+
+</Project>
