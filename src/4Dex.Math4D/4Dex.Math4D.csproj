@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Plain .NET, zero dependencies, and deliberately no UnityEngine reference:
+    SPEC §3 separation is enforced by what this assembly cannot link.
+    netstandard2.1 + C# 9 is what Unity 6 can consume as source or as a DLL.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>4Dex.Math4D</AssemblyName>
+    <!-- C# identifiers cannot start with a digit, so the namespace spells it out. -->
+    <RootNamespace>FourDex.Math4D</RootNamespace>
+  </PropertyGroup>
+
+</Project>

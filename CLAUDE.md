@@ -15,11 +15,16 @@ substitute a different design.
 
 ## Current status
 
-Pre-Milestone 0. No implementation code exists yet. The design was done on a
-Linux box with no Unity installed; implementation continues on Windows.
+Milestone 0 in progress, on Windows. `src/4Dex.Math4D` and `tests/4Dex.Tests`
+are written but **have never been compiled** — the .NET 10 SDK was being
+installed when work paused. First action next session: `dotnet test
+4Dex.Core.sln` and fix whatever fails. Still to do for Milestone 0: World4D,
+the Unity project (URP + OpenXR/Oculus), Player4DState (owns the focusW /
+position.w invariants), HmdPoseSource/XRRig, CoordinateHUD, Lab4D scene.
 
-**Open decision:** which Unity version is installed. Unity 6 LTS (6000.0)
-recommended, 2022.3 LTS is the fallback. Only `Packages/manifest.json` differs.
+**Unity version: 6000.6.2f1** (Unity 6.6, a non-LTS update release). Chosen
+over the originally recommended 6000.0 LTS; only `Packages/manifest.json` is
+version-specific.
 
 Next task: Milestone 0 per `docs/ARCHITECTURE.md` §7.
 
@@ -61,8 +66,11 @@ These are load-bearing. Violating one is a design regression, not a shortcut.
 The math core builds and tests anywhere, without Unity or a headset:
 
 ```
-dotnet test
+dotnet test 4Dex.Core.sln
 ```
+
+(Name the solution explicitly: Unity generates its own `4Dex.sln` at the root.)
+Namespaces are `FourDex.*`, since C# identifiers cannot start with a digit.
 
 Do this before touching Unity-side code — a failing invariant there will
 otherwise surface as a baffling rendering bug (SPEC §20).

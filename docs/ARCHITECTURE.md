@@ -32,7 +32,7 @@ reference at all** — their own `Vec4`, their own quaternion.
 ```
 src/4Dex.Math4D/     netstandard2.1, zero dependencies
 src/4Dex.World4D/    netstandard2.1, depends on Math4D
-tests/4Dex.Tests/    net6.0, runs anywhere
+tests/4Dex.Tests/    net10.0 + xUnit, runs anywhere
 Assets/4Dex/         Unity-only: Player4D, Input4D, Perception4D,
                      Shadow4D, XR, Debug4D
 ```
@@ -112,6 +112,12 @@ Right-multiplying by `conj(exp(i*beta))` gives **XW by -beta and YZ by +beta**
 | `i` | XW / YZ | XW: `alpha = t/2, beta = -t/2` | YZ (pitch): `alpha = beta = t/2` |
 | `j` | YW / ZX | YW | ZX (yaw) |
 | `k` | ZW / XY | ZW | XY (roll) |
+
+Sign note: the derivation above measures XW from W toward X. The implementation
+(`Plane4`) uses one convention for all six planes — `+t` turns the first-named
+axis toward the second — under which a pure ana/kata plane is `alpha = -t/2,
+beta = +t/2`. The pairing is unchanged; only the sign label differs. The tests
+check every plane against an independent Givens rotation.
 
 **Each ana/kata rotation plane is the conjugate partner of exactly one ordinary
 3D rotation plane.** Pitch and XW are the two halves of one generator; yaw and
@@ -231,9 +237,10 @@ Lab objects at w = 0, +1, -1 per SPEC §23.
 
 ---
 
-## 10. Open decision
+## 10. Unity version (resolved)
 
-**Which Unity version is installed on the Windows machine.**
+**Resolved: Unity 6000.6.2f1** is installed on the Windows machine. The options
+originally considered:
 
 - Unity 6 LTS (6000.0) — recommended. Best OpenXR + URP support; the render-graph
   URP path is where custom passes are heading.

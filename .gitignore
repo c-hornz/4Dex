@@ -58,6 +58,8 @@ TestResults/
 !/src/**/*.csproj
 !/tests/**/*.csproj
 !/*.sln.DotSettings
+# Hand-authored solution for the pure-.NET core. Named apart from the 4Dex.sln Unity generates.
+!/4Dex.Core.sln
 
 # ---- Editors / OS ----
 .idea/
