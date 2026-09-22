@@ -19,8 +19,24 @@ Milestone 0 in progress, on Windows. `src/4Dex.Math4D` and `src/4Dex.World4D`
 build and `tests/4Dex.Tests` passes (78/78, .NET SDK 10.0.401). World4D's
 namespace is `FourDex.World`, not `FourDex.World4D`: a namespace named like its
 `World4D` class would shadow the class from every other `FourDex.*` namespace.
-Still to do for Milestone 0: the Unity project (URP + OpenXR/Oculus), Player4DState (owns the focusW /
-position.w invariants), HmdPoseSource/XRRig, CoordinateHUD, Lab4D scene.
+The Unity project lives at the repo root (URP Blank template, OpenXR 1.18.0,
+XR Management 4.7.0). XR is configured by `Assets/4Dex/Editor/XRProjectSetup.cs`
+(menu **4Dex > Configure XR**): OpenXR loader on Standalone, Oculus Touch
+profile. It is idempotent; rerun it rather than clicking through Project Settings.
+Still to do for Milestone 0: getting Math4D/World4D into Unity, Player4DState
+(owns the focusW / position.w invariants), HmdPoseSource/XRRig, CoordinateHUD,
+Lab4D scene.
+
+Unity runs headless, so Unity-side code can be compiled without the user:
+
+```
+"C:\Program Files\Unity\Hub\Editor\6000.6.2f1\Editor\Unity.exe" -batchmode -quit -nographics -projectPath C:\Users\cthor\4Dex -logFile <log>
+```
+
+Then search the log for `error CS`. Add `-executeMethod Namespace.Class.Method` to
+run an editor script. Close the editor first; batch mode can't open a project
+the editor already has open. Keep `-logFile` on a short path: under a long path
+the Library cache exceeds Windows' 260-character limit.
 
 **Unity version: 6000.6.2f1** (Unity 6.6, a non-LTS update release). Chosen
 over the originally recommended 6000.0 LTS; only `Packages/manifest.json` is
@@ -69,7 +85,7 @@ The math core builds and tests anywhere, without Unity or a headset:
 dotnet test 4Dex.Core.sln
 ```
 
-(Name the solution explicitly: Unity generates its own `4Dex.sln` at the root.)
+(Name the solution explicitly: Unity generates its own `4Dex.slnx` at the root.)
 Namespaces are `FourDex.*`, since C# identifiers cannot start with a digit.
 
 Do this before touching Unity-side code — a failing invariant there will
