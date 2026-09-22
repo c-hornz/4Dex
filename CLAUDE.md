@@ -38,8 +38,11 @@ against a real headset.
 and a minimal `ProjectionDriver`, pulled forward from Milestone 1. It places
 objects in the player's slice each frame and records signed `DeltaW`; there are
 no shaders yet. An object's Unity transform is *output*, overwritten every frame;
-author it in 4D. Unity tests: 10/10 passing.
-Still to do for Milestone 0: CoordinateHUD, Lab4D scene.
+author it in 4D. `Debug4D/CoordinateHUD` (goes on the XR camera) is a
+head-locked, world-space readout: position, focus, basis vectors +
+orthonormality error, raw HMD pose. Its text comes from the pure
+`CoordinateReadout.Format`. Unity tests: 15/15 passing.
+Still to do for Milestone 0: Lab4D scene.
 
 Unity runs headless, so Unity-side code can be compiled without the user:
 
