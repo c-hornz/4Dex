@@ -29,8 +29,12 @@ The Unity project lives at the repo root (URP Blank template, OpenXR 1.18.0,
 XR Management 4.7.0). XR is configured by `Assets/4Dex/Editor/XRProjectSetup.cs`
 (menu **4Dex > Configure XR**): OpenXR loader on Standalone, Oculus Touch
 profile. It is idempotent; rerun it rather than clicking through Project Settings.
-Still to do for Milestone 0: HmdPoseSource/XRRig, the MonoBehaviour wrappers
-(Player4D, Object4DBehaviour/World4DRegistry), CoordinateHUD, Lab4D scene.
+`Assets/4Dex/Runtime/XR` has XRRig + HmdPoseSource (camera gets the raw pose
+first, then `PoseSampled` fans it out to the 4D mapping). Its invariants are
+Unity EditMode tests in `Assets/4Dex/Tests/EditMode` (4/4 passing). They have
+not yet run against a real headset.
+Still to do for Milestone 0: the MonoBehaviour wrappers (Player4D,
+Object4DBehaviour/World4DRegistry), CoordinateHUD, Lab4D scene.
 
 Unity runs headless, so Unity-side code can be compiled without the user:
 
@@ -39,7 +43,8 @@ Unity runs headless, so Unity-side code can be compiled without the user:
 ```
 
 Then search the log for `error CS`. Add `-executeMethod Namespace.Class.Method` to
-run an editor script. Close the editor first; batch mode can't open a project
+run an editor script. For Unity tests, drop `-quit` and add `-runTests
+-testPlatform EditMode -testResults <xml>`, then read the NUnit XML. Close the editor first; batch mode can't open a project
 the editor already has open. Keep `-logFile` on a short path: under a long path
 the Library cache exceeds Windows' 260-character limit.
 
