@@ -34,18 +34,24 @@ namespace FourDex.Runtime
         /// <summary>One occluder in the 4D shadow field: where it is in the scene, how far it reaches, and its W channels.</summary>
         public readonly struct ShadowOccluder
         {
-            public ShadowOccluder(string name, Vector3 center, float radius, ShadowChannels channels)
+            public ShadowOccluder(string name, Vector3 center, float radius, ShadowChannels channels, Vector3 echoDirection)
             {
                 Name = name;
                 Center = center;
                 Radius = radius;
                 Channels = channels;
+                EchoDirection = echoDirection;
             }
 
             public readonly string Name;
+
+            /// <summary>Shadow centre, already sheared by the view's W lean (SPEC §16).</summary>
             public readonly Vector3 Center;
             public readonly float Radius;
             public readonly ShadowChannels Channels;
+
+            /// <summary>Unit direction the echoes spread along (SPEC §17); their distance apart is in the channels.</summary>
+            public readonly Vector3 EchoDirection;
         }
 
         // Bounded on purpose: the shadow field costs occluders x receiver pixels (ARCHITECTURE §9, risk 4).
@@ -54,10 +60,14 @@ namespace FourDex.Runtime
         private static readonly int OccluderSphereId = Shader.PropertyToID("_FourDexOccluderSphere");
         private static readonly int OccluderWId = Shader.PropertyToID("_FourDexOccluderW");
         private static readonly int OccluderCountId = Shader.PropertyToID("_FourDexOccluderCount");
+        private static readonly int OccluderEchoId = Shader.PropertyToID("_FourDexOccluderEcho");
+        private static readonly int OccluderRippleId = Shader.PropertyToID("_FourDexOccluderRipple");
 
         private readonly List<ShadowOccluder> _occluders = new List<ShadowOccluder>();
         private readonly Vector4[] _occluderSpheres = new Vector4[MaxOccluders];
         private readonly Vector4[] _occluderChannels = new Vector4[MaxOccluders];
+        private readonly Vector4[] _occluderEchoes = new Vector4[MaxOccluders];
+        private readonly Vector4[] _occluderRipples = new Vector4[MaxOccluders];
 
         /// <summary>This frame's shadow casters, strongest first. Includes objects too far in W to be rendered (SPEC §13).</summary>
         public IReadOnlyList<ShadowOccluder> Occluders => _occluders;
@@ -102,6 +112,16 @@ namespace FourDex.Runtime
                 _perception.PushGlobals();
             _occluders.Clear();
 
+            // How far world W leans into the 3-space being viewed: zero in a conventional view, growing as the view
+            // rotates through XW/YW/ZW. It is the direction shadows shear and echoes spread along (SPEC §16, §17).
+            Vector3 wLean = toViewer.Apply(Vec4.UnitW).Xyz();
+            if (_viewSpace != null)
+                wLean = _viewSpace.rotation * wLean;
+            // With no lean there is no 4D direction to use, so echoes spread across the view instead of nowhere.
+            Vector3 echoDirection = wLean.sqrMagnitude > 1e-4f
+                ? wLean.normalized
+                : (_viewSpace != null ? _viewSpace.right : Vector3.right);
+
             foreach (Object4DBehaviour member in _world.Members)
             {
                 Object4D? body = member.Body;
@@ -144,11 +164,15 @@ namespace FourDex.Runtime
                 // be seen still darkens what it lies above (SPEC §13).
                 if (shadow != null)
                 {
-                    ShadowChannels channels = ShadowModel.Evaluate(member.WGap, shadow);
+                    ShadowChannels channels = ShadowModel.Evaluate(member.WGap, shadow, halfExtentW);
+                    member.Shadow = channels;
                     if (channels.Casts)
                     {
                         float radius = 0.5f * Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)) * shadow.RadiusScale;
-                        _occluders.Add(new ShadowOccluder(member.name, member.transform.position, radius, channels));
+                        // SPEC §16: shift the shadow along the direction world W leans into the viewed 3-space. That
+                        // lean is zero until the view is rotated through W, so a conventional view shears not at all.
+                        Vector3 center = member.transform.position + wLean * channels.ShearPerLean;
+                        _occluders.Add(new ShadowOccluder(member.name, center, radius, channels, echoDirection));
                     }
                 }
             }
@@ -162,6 +186,7 @@ namespace FourDex.Runtime
         /// </summary>
         private void UploadShadowField()
         {
+            int echoCount = _perception != null ? Mathf.Clamp(_perception.Shadow.EchoCount, 1, 5) : 1;
             if (_occluders.Count > MaxOccluders)
             {
                 _occluders.Sort((a, b) => b.Channels.Strength.CompareTo(a.Channels.Strength));
@@ -173,18 +198,25 @@ namespace FourDex.Runtime
                 if (i < _occluders.Count)
                 {
                     ShadowOccluder o = _occluders[i];
+                    ShadowChannels c = o.Channels;
                     _occluderSpheres[i] = new Vector4(o.Center.x, o.Center.y, o.Center.z, o.Radius);
-                    _occluderChannels[i] = new Vector4(o.Channels.Strength, o.Channels.Tint, o.Channels.ShimmerHz, o.Channels.Softness);
+                    _occluderChannels[i] = new Vector4(c.Strength, c.Tint, c.ShimmerHz, c.Softness);
+                    _occluderEchoes[i] = new Vector4(o.EchoDirection.x, o.EchoDirection.y, o.EchoDirection.z, c.EchoSpread);
+                    _occluderRipples[i] = new Vector4(c.RippleFrequency, c.RippleSpeed, c.RippleAmplitude, echoCount);
                 }
                 else
                 {
                     _occluderSpheres[i] = Vector4.zero;
                     _occluderChannels[i] = Vector4.zero;
+                    _occluderEchoes[i] = Vector4.zero;
+                    _occluderRipples[i] = Vector4.zero;
                 }
             }
 
             Shader.SetGlobalVectorArray(OccluderSphereId, _occluderSpheres);
             Shader.SetGlobalVectorArray(OccluderWId, _occluderChannels);
+            Shader.SetGlobalVectorArray(OccluderEchoId, _occluderEchoes);
+            Shader.SetGlobalVectorArray(OccluderRippleId, _occluderRipples);
             Shader.SetGlobalFloat(OccluderCountId, _occluders.Count);
         }
 

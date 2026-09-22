@@ -18,10 +18,13 @@ namespace FourDex.Runtime
         // Below this, a basis component or W offset prints as exactly zero rather than as float noise.
         private const float Epsilon = 5e-4f;
 
-        /// <param name="objects">Optional per-object perception state, one line each: the M1 check that focus picks the right object.</param>
+        /// <param name="objects">
+        /// Optional per-object perception state, one line each: the M1 check that focus picks the right object, plus
+        /// what it casts into the shadow field (SPEC §20's shadow debug view).
+        /// </param>
         /// <param name="rotation">Optional SPEC §20 rotation monitor: orientation as plane angles, and per-plane rate.</param>
         public static string Format(Player4DState? player, HmdPose? head, float? focusWidth = null,
-            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null, RotationMonitor? rotation = null,
+            IEnumerable<(string Name, PerceptionChannels Channels, ShadowChannels Shadow)>? objects = null, RotationMonitor? rotation = null,
             float survey = 0f)
         {
             var sb = new StringBuilder(512);
@@ -63,12 +66,20 @@ namespace FourDex.Runtime
 
             if (objects != null)
             {
-                foreach ((string name, PerceptionChannels c) in objects)
+                foreach ((string name, PerceptionChannels c, ShadowChannels s) in objects)
                 {
                     sb.Append("  ").Append(name.PadRight(3)).Append(" gap ").Append(Num(c.SignedGap))
                       .Append(' ').Append(BandLabel(c.Band))
-                      .Append("  V ").Append(c.Visibility.ToString("0.00", CultureInfo.InvariantCulture))
-                      .Append('\n');
+                      .Append("  V ").Append(c.Visibility.ToString("0.00", CultureInfo.InvariantCulture));
+                    if (s.Casts)
+                    {
+                        sb.Append("   shadow ").Append(s.Strength.ToString("0.00", CultureInfo.InvariantCulture))
+                          .Append(" ring ").Append(s.RippleFrequency.ToString("0.0", CultureInfo.InvariantCulture))
+                          .Append(s.RippleSpeed >= 0f ? " out" : " in");
+                        if (s.EchoSpread > 0.01f)
+                            sb.Append(" echo ").Append(s.EchoSpread.ToString("0.00", CultureInfo.InvariantCulture));
+                    }
+                    sb.Append('\n');
                 }
             }
 

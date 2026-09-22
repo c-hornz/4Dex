@@ -153,8 +153,22 @@ and `FocusingOnAHiddenOccluder_*`, plus
   larger so shadows land in view. Snapshot `-lookDown`.
 - Parameters are in `PerceptionSettings.Shadow`, with panel entries.
 
-Milestone 7 continues this: ripple/interference, shadow echoes for W extent,
-and view-dependent shear (SPEC §15-§17).
+**Milestone 7 (advanced shadow behaviour)**: ripple, echoes and view-dependent
+shear, all live-tunable (`ShadowRippleTests`,
+`PerceptionDriverTests.RotatingThroughW_Shears*` and `ThickObjects_*`, renders
+`lab4d-m7-ripple/shear/echo.png`).
+- **Ripple** (§15): rings across the shadow; frequency rises with |W gap|,
+  travel is outward for ana and inward for kata, amplitude follows occlusion
+  strength. `InvertRipple` swaps the convention without touching the tint.
+- **Shear** (§16): the shadow shifts along `wLean`, the direction world W leans
+  into the viewed 3-space (`toViewer.Apply(UnitW).Xyz()`). It is exactly zero
+  in a conventional view, so rotating through W slides ana and kata shadows
+  apart.
+- **Echoes** (§17): a W-thick occluder casts `EchoCount` copies spread along
+  that same direction by its W extent; the spread collapses as focus arrives.
+  Cost is occluders x echoes x pixels, so both are bounded (16 x 5).
+- HUD object lines now carry the shadow columns (strength, ring frequency,
+  in/out, echo spread): SPEC §20's shadow debug view.
 
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.

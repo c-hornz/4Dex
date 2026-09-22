@@ -51,6 +51,9 @@ namespace FourDex.Runtime
         /// <summary>This frame's perception channels. Written by <c>ProjectionDriver</c> when it has PerceptionSettings.</summary>
         public PerceptionChannels Channels { get; internal set; }
 
+        /// <summary>This frame's shadow channels: what this object casts, whether or not it is itself visible (SPEC §13).</summary>
+        public ShadowChannels Shadow { get; internal set; }
+
         private PhaseRenderer? _phase;
         private bool _phaseLookedUp;
 

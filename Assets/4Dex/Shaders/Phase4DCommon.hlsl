@@ -32,6 +32,8 @@ float _FourDexFarFaceFill;
 #define FOURDEX_MAX_OCCLUDERS 16
 float4 _FourDexOccluderSphere[FOURDEX_MAX_OCCLUDERS]; // xyz centre, w influence radius
 float4 _FourDexOccluderW[FOURDEX_MAX_OCCLUDERS];      // x strength, y signed tint, z shimmer Hz, w edge softness
+float4 _FourDexOccluderEcho[FOURDEX_MAX_OCCLUDERS];   // xyz echo spread direction (unit), w spread in metres
+float4 _FourDexOccluderRipple[FOURDEX_MAX_OCCLUDERS]; // x rings/m, y signed rings/s, z amplitude, w echo count
 float _FourDexOccluderCount;
 float _FourDexShadowDarkness;
 float _FourDexShadowTint;
@@ -86,31 +88,49 @@ void FourDexShadowField(float3 positionWS, float3 lightDir, float time, out floa
     {
         float4 sphere = _FourDexOccluderSphere[i];
         float4 w = _FourDexOccluderW[i];
+        float4 echo = _FourDexOccluderEcho[i];
+        float4 ripple = _FourDexOccluderRipple[i];
 
-        // Along the light: how far this point lies behind the occluder.
-        float3 d = positionWS - sphere.xyz;
-        float t = dot(d, -lightDir);
-        if (t <= 0 || t > _FourDexShadowReach)
-            continue;
-
-        // Off the shadow axis, against an influence radius that grows with distance (penumbra) and with softness
-        // (SPEC §14: an out-of-focus shadow has uncertain edges).
-        float3 perpendicular = d + lightDir * t;
-        float radius = max(sphere.w * w.w * (1.0 + 0.12 * t), 1e-4);
-        float edge = smoothstep(0.0, 1.0, 1.0 - length(perpendicular) / radius);
-        if (edge <= 0)
-            continue;
-
-        // Fade out at the reach limit, and skip the occluder's own surface.
-        float fade = saturate(1.0 - t / _FourDexShadowReach) * saturate(t / max(sphere.w, 1e-3) - 0.5);
         // Shimmer: focus mismatch makes the shadow unsteady.
         float flicker = w.z > 0 ? 0.78 + 0.22 * sin(6.2831853 * w.z * time + sphere.x * 12.9898 + sphere.z * 4.1414) : 1.0;
+        // Echoes: a W-thick occluder casts several offset copies, spread by how thick it is (SPEC §17). They converge
+        // as focus reaches it, because the spread the CPU sends shrinks to zero.
+        int echoes = max((int)ripple.w, 1);
+        float echoScale = echoes > 1 ? 0.75 : 1.0; // sharing keeps overlapping echoes from reading darker than one shadow
 
-        float strength = w.x * edge * fade * flicker;
-        if (strength > shadow)
+        [loop] for (int e = 0; e < echoes; e++)
         {
-            shadow = strength;
-            tint = w.y;
+            float u = echoes > 1 ? ((float)e / (echoes - 1)) - 0.5 : 0.0;
+            float3 center = sphere.xyz + echo.xyz * (echo.w * u);
+
+            // Along the light: how far this point lies behind the occluder.
+            float3 d = positionWS - center;
+            float t = dot(d, -lightDir);
+            if (t <= 0 || t > _FourDexShadowReach)
+                continue;
+
+            // Off the shadow axis, against an influence radius that grows with distance (penumbra) and with softness
+            // (SPEC §14: an out-of-focus shadow has uncertain edges).
+            float3 perpendicular = d + lightDir * t;
+            float across = length(perpendicular);
+            float radius = max(sphere.w * w.w * (1.0 + 0.12 * t), 1e-4);
+            float edge = smoothstep(0.0, 1.0, 1.0 - across / radius);
+            if (edge <= 0)
+                continue;
+
+            // Fade out at the reach limit, and skip the occluder's own surface.
+            float fade = saturate(1.0 - t / _FourDexShadowReach) * saturate(t / max(sphere.w, 1e-3) - 0.5);
+
+            // Ripple: rings across the shadow. Frequency rises with W distance and they travel outward for ana,
+            // inward for kata, so the side is readable from motion alone (SPEC §15).
+            float rings = 1.0 + ripple.z * sin(6.2831853 * (ripple.x * across - ripple.y * time));
+
+            float strength = w.x * edge * fade * flicker * echoScale * saturate(rings);
+            if (strength > shadow)
+            {
+                shadow = strength;
+                tint = w.y;
+            }
         }
     }
 }

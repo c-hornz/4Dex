@@ -119,17 +119,17 @@ namespace FourDex.Runtime
             helpPanel.sizeDelta = new Vector2(PanelWidth, _helpText.preferredHeight + 2f * Padding);
         }
 
-        private IEnumerable<(string, PerceptionChannels)>? ObjectLines()
+        private IEnumerable<(string, PerceptionChannels, ShadowChannels)>? ObjectLines()
         {
             if (_projection == null || _projection.Perception == null || _projection.World == null)
                 return null;
-            var lines = new List<(string, PerceptionChannels)>();
+            var lines = new List<(string, PerceptionChannels, ShadowChannels)>();
             foreach (Object4DBehaviour member in _projection.World.Members)
             {
                 // First word of the GameObject name: the lab names objects "A  w=0 ...", "B  w=+1 ...".
                 string name = member.name;
                 int space = name.IndexOf(' ');
-                lines.Add((space > 0 ? name.Substring(0, space) : name, member.Channels));
+                lines.Add((space > 0 ? name.Substring(0, space) : name, member.Channels, member.Shadow));
             }
             return lines;
         }

@@ -1,4 +1,5 @@
 using System.Linq;
+using FourDex.Math4D;
 using FourDex.Perception;
 using FourDex.Runtime;
 using NUnit.Framework;
@@ -205,6 +206,44 @@ namespace FourDex.Tests.EditMode
             Assert.Less(focused.Softness, far.Softness);
             Assert.Less(focused.ShimmerHz, far.ShimmerHz);
             Assert.AreEqual(0f, _player.State.Position.W, "focus only; the player has not moved");
+        }
+
+        [Test]
+        public void RotatingThroughW_ShearsShadowsApart_ButAConventionalViewDoesNot()
+        {
+            // SPEC §16: view-basis rotation through W slides shadows, and objects on opposite sides slide opposite
+            // ways. With no W rotation there is no lean, so shadow centres sit exactly under their objects.
+            Object4DBehaviour ana = AddObject("E", 1f, Thin);
+            Object4DBehaviour kata = AddObject("F", -1f, Thin);
+
+            _driver.ProjectAll();
+            Assert.AreEqual(ana.transform.position, _driver.Occluders.First(o => o.Name == "E").Center);
+            Assert.AreEqual(kata.transform.position, _driver.Occluders.First(o => o.Name == "F").Center);
+
+            _player.State.RotateLocal(Plane4.XW, Mathf.PI / 4f);
+            _driver.ProjectAll();
+
+            Vector3 anaShift = _driver.Occluders.First(o => o.Name == "E").Center - ana.transform.position;
+            Vector3 kataShift = _driver.Occluders.First(o => o.Name == "F").Center - kata.transform.position;
+            Assert.Greater(anaShift.magnitude, 0.01f, "rotating through W must shear the shadow");
+            Assert.Less(Vector3.Dot(anaShift.normalized, kataShift.normalized), -0.9f, "ana and kata shear opposite ways");
+        }
+
+        [Test]
+        public void ThickObjects_CastSpreadEchoes_ThatConvergeOnFocus()
+        {
+            // SPEC §17: echo spread is the occluder's W extent made visible, and it collapses as focus arrives.
+            var thick = new Vector4(0.2f, 0.2f, 0.2f, 1.5f);
+            Object4DBehaviour slab = AddObject("D", 2f, thick);
+            Object4DBehaviour thin = AddObject("B", 2f, Thin);
+
+            _driver.ProjectAll();
+            Assert.Greater(slab.Shadow.EchoSpread, thin.Shadow.EchoSpread);
+            float spreadBefore = slab.Shadow.EchoSpread;
+
+            _player.State.SetFocusW(2f);
+            _driver.ProjectAll();
+            Assert.Less(slab.Shadow.EchoSpread, spreadBefore, "echoes converge as focus reaches the occluder");
         }
 
         [Test]
