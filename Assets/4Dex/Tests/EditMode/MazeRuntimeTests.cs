@@ -107,6 +107,26 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void GeneratedMazes_AreConnected_AndCrossW()
+        {
+            // Milestone 9 in the scene: flipping the generate flag carves the maze instead of using the openings.
+            var so = new SerializedObject(_maze);
+            so.FindProperty("_size").vector4Value = new Vector4(3f, 1f, 3f, 2f);
+            so.FindProperty("_generate").boolValue = true;
+            SerializedProperty generation = so.FindProperty("_generation");
+            generation.FindPropertyRelative("Seed").intValue = 4;
+            generation.FindPropertyRelative("WBias").floatValue = 0.65f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            Maze4D maze = _maze.Maze;
+
+            Assert.IsTrue(MazeGenerator4D.IsConnected(maze));
+            Assert.Greater(MazeGenerator4D.CountOpenings(maze, throughWOnly: true), 0, "a 4D maze must use ana/kata");
+            Assert.AreEqual(maze.CellCount - 1, MazeGenerator4D.CountOpenings(maze, throughWOnly: false));
+            Assert.Greater(_maze.WallFaces().Count(), 0);
+        }
+
+        [Test]
         public void WallSlabs_SitOnTheirFace_AndSpanOneCellThroughW()
         {
             (Vector4 position, Vector4 half) = _maze.WallSlab(new Cell4D(0, 0, 0, 0), Direction4.PosX, 0.2f);

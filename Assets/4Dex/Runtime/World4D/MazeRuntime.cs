@@ -40,7 +40,13 @@ namespace FourDex.Runtime
         [Tooltip("How close the player's centre may come to a wall.")]
         [SerializeField, Min(0f)] private float _playerRadius = 0.35f;
 
-        [Tooltip("Faces to open. Everything else, including the outer boundary, stays walled.")]
+        [Tooltip("Carve the maze procedurally instead of using the authored openings below (SPEC §19, Milestone 9).")]
+        [SerializeField] private bool _generate;
+
+        [Tooltip("Seed, W bias and extra openings. Same seed, same maze.")]
+        [SerializeField] private MazeGenerationOptions _generation = new MazeGenerationOptions();
+
+        [Tooltip("Faces to open when not generating. Everything else, including the outer boundary, stays walled.")]
         [SerializeField] private List<CellOpening> _openings = new List<CellOpening>();
 
         private Maze4D? _maze;
@@ -138,12 +144,15 @@ namespace FourDex.Runtime
 
         private Maze4D Build()
         {
-            var maze = new Maze4D(
-                Mathf.Max(1, Mathf.RoundToInt(_size.x)),
-                Mathf.Max(1, Mathf.RoundToInt(_size.y)),
-                Mathf.Max(1, Mathf.RoundToInt(_size.z)),
-                Mathf.Max(1, Mathf.RoundToInt(_size.w)));
+            int x = Mathf.Max(1, Mathf.RoundToInt(_size.x));
+            int y = Mathf.Max(1, Mathf.RoundToInt(_size.y));
+            int z = Mathf.Max(1, Mathf.RoundToInt(_size.z));
+            int w = Mathf.Max(1, Mathf.RoundToInt(_size.w));
 
+            if (_generate)
+                return MazeGenerator4D.Generate(x, y, z, w, _generation);
+
+            var maze = new Maze4D(x, y, z, w);
             foreach (CellOpening opening in _openings)
             {
                 Cell4D cell = opening.Cell;

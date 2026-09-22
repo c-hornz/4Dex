@@ -190,6 +190,20 @@ walls stop them (`CellCollisionTests`, `MazeRuntimeTests`, renders
 - HUD and W-slice cap their per-object lists (nearest in W, with a "+N more"
   note), since a maze has dozens of walls.
 
+**Milestone 9 (procedural 4D maze)**: done, and with it every milestone in
+SPEC §24. `MazeGenerator4D` carves a randomised depth-first maze over the 4D
+adjacency graph, where ana and kata are two of a cell's eight neighbours:
+- `Seed` (same seed, same maze), `WBias` (how much the carve prefers W over
+  ordinary directions), `ExtraOpenings` (loops; 0 leaves a perfect maze).
+- Connected by construction, and `IsConnected` / `CountOpenings` check it:
+  `MazeGeneratorTests` covers 25 seeds, awkward shapes, the spanning-tree edge
+  count, determinism, the W bias, and the boundary holding.
+- `MazeRuntime._generate` switches a scene from authored openings to carving.
+- `Assets/Scenes/Maze4D.unity` (menu **4Dex > Rebuild Maze4D Scene**): 3x1x3x2
+  cells, seed 4, WBias 0.65, 2 extra openings. 19 openings, 7 through W.
+- Snapshot `-scene Maze4D`, and `-cameraY` for a map view from above, since
+  mazes have no ceilings.
+
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 

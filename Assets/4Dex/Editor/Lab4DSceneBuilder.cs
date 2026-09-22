@@ -29,6 +29,7 @@ namespace FourDex.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Lab4D.unity";
         public const string CellsScenePath = "Assets/Scenes/Cells4D.unity";
+        public const string MazeScenePath = "Assets/Scenes/Maze4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
         private const string MappingFolder = "Assets/4Dex/Settings/Mapping";
@@ -258,6 +259,57 @@ namespace FourDex.EditorTools
             Debug.Log($"[4Dex] Built {CellsScenePath} with {walls.Count} walls and {openings.Count} openings.");
         }
 
+        /// <summary>
+        /// Generates <c>Assets/Scenes/Maze4D.unity</c>: Milestone 9's procedural maze. A 3x1x3x2 grid carved by
+        /// <see cref="MazeGenerator4D"/> with a W bias, so routes leave the slice often.
+        /// </summary>
+        [MenuItem("4Dex/Rebuild Maze4D Scene")]
+        public static void BuildMaze()
+        {
+            (Scene scene, Common common) = CreateCommon();
+
+            var size = new Vector4(3f, 1f, 3f, 2f);
+            var maze = common.WorldRoot.AddComponent<MazeRuntime>();
+            Set(maze, "_player", common.Player);
+            Set(maze, "_hud", common.Hud);
+            var mazeObject = new SerializedObject(maze);
+            mazeObject.FindProperty("_size").vector4Value = size;
+            mazeObject.FindProperty("_generate").boolValue = true;
+            SerializedProperty generation = mazeObject.FindProperty("_generation");
+            generation.FindPropertyRelative("Seed").intValue = 4;
+            // Above 0.5, so the carve crosses W more often than it would by chance: a 4D maze should need ana/kata.
+            generation.FindPropertyRelative("WBias").floatValue = 0.65f;
+            generation.FindPropertyRelative("ExtraOpenings").intValue = 2;
+            mazeObject.ApplyModifiedPropertiesWithoutUndo();
+
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor (3D reference, not 4D)";
+            floor.transform.localScale = new Vector3(1.6f, 1f, 1.6f);
+            floor.transform.position = new Vector3(3f, 0f, 3f); // under the middle of the 3x3 grid
+            floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
+
+            var walls = new List<Object4DBehaviour>();
+            foreach ((Cell4D cell, Direction4 direction) in maze.WallFaces())
+            {
+                (Vector4 position, Vector4 half) = maze.WallSlab(cell, direction, 0.2f);
+                walls.Add(AddObject(common.WorldRoot, $"Wall {cell.X}{cell.Y}{cell.Z}{cell.W} {direction}", PrimitiveType.Cube,
+                    common.ObjectMaterial, position, half, default));
+            }
+
+            foreach (Object4DBehaviour wall in walls)
+                common.Registry.Register(wall);
+            common.Driver.ProjectAll();
+            foreach (Object4DBehaviour wall in walls)
+                common.Registry.Unregister(wall);
+
+            EditorSceneManager.SaveScene(scene, MazeScenePath);
+            int throughW = MazeGenerator4D.CountOpenings(maze.Maze, throughWOnly: true);
+            Debug.Log($"[4Dex] Built {MazeScenePath}: {walls.Count} walls, " +
+                      $"{MazeGenerator4D.CountOpenings(maze.Maze, false)} openings ({throughW} through W), " +
+                      $"connected: {MazeGenerator4D.IsConnected(maze.Maze)}.");
+        }
+
         private static CellOpening Open(int x, int y, int z, int w, Direction4 direction) =>
             new CellOpening { X = x, Y = y, Z = z, W = w, Direction = direction };
 
@@ -276,8 +328,9 @@ namespace FourDex.EditorTools
 
             // -scene Cells4D renders the cell structure instead of the lab.
             int sceneArg = Array.IndexOf(args, "-scene");
-            string scenePath = sceneArg >= 0 && sceneArg + 1 < args.Length && args[sceneArg + 1].Contains("Cells")
-                ? CellsScenePath
+            string requested = sceneArg >= 0 && sceneArg + 1 < args.Length ? args[sceneArg + 1] : "";
+            string scenePath = requested.Contains("Cells") ? CellsScenePath
+                : requested.Contains("Maze") ? MazeScenePath
                 : ScenePath;
             EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
@@ -307,10 +360,17 @@ namespace FourDex.EditorTools
             driver.ProjectAll();
 
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
-            // -lookDown tilts the camera (the HUD lives on it) toward the floor, where the shadow field lands.
+            // -lookDown tilts the camera (the HUD lives on it) toward the floor, where the shadow field lands, and
+            // -cameraY raises it: mazes have no ceilings, so from above the layout reads as a map.
             float lookDown = FloatArg(args, "-lookDown", 0f);
             if (lookDown != 0f)
                 hud.transform.localRotation = Quaternion.Euler(lookDown, 0f, 0f);
+            float cameraY = FloatArg(args, "-cameraY", 0f);
+            if (cameraY != 0f)
+            {
+                Vector3 local = hud.transform.localPosition;
+                hud.transform.localPosition = new Vector3(local.x, cameraY, local.z);
+            }
             // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
                 hud.Help = () => DesktopTestMode.Legend;
