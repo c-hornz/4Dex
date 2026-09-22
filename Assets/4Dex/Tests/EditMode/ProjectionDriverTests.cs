@@ -91,7 +91,10 @@ namespace FourDex.Tests.EditMode
             _driver.ProjectAll();
 
             foreach (Object4DBehaviour o in new[] { a, b, c })
+            {
                 AssertNear(new Vector3(0f, 1.5f, 2f), o.transform.position);
+                AssertNear(Vector3.one, o.transform.localScale); // default half-extents 0.5
+            }
             Assert.AreEqual(0f, a.DeltaW, 1e-6f);
             Assert.AreEqual(1f, b.DeltaW, 1e-6f);
             Assert.AreEqual(-1f, c.DeltaW, 1e-6f);

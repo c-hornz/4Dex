@@ -57,6 +57,9 @@ namespace FourDex.Runtime
                     member.transform.SetPositionAndRotation(_viewSpace.TransformPoint(position), _viewSpace.rotation * rotation);
                 else
                     member.transform.SetPositionAndRotation(position, rotation);
+
+                // Size comes from the 4D extent too, for unit-sized meshes (cube, sphere) under an unscaled parent.
+                member.transform.localScale = 2f * body.HalfExtents.Xyz();
             }
         }
 

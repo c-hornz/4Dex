@@ -19,8 +19,8 @@ namespace FourDex.Runtime
         [SerializeField] private Player4D? _player;
         [SerializeField] private XRRig? _rig;
 
-        [Tooltip("Panel centre in the camera's frame, in metres. Below the line of sight so it does not cover the lab.")]
-        [SerializeField] private Vector3 _offset = new Vector3(0f, -0.25f, 1.2f);
+        [Tooltip("Panel centre in the camera's frame, in metres. About 20 degrees below the line of sight: glance down to read it, and it does not cover the lab.")]
+        [SerializeField] private Vector3 _offset = new Vector3(0f, -0.45f, 1.2f);
 
         [Tooltip("Text refreshes per second. Reformatting every frame allocates for no readable gain.")]
         [SerializeField, Min(1f)] private float _refreshHz = 10f;
@@ -29,7 +29,7 @@ namespace FourDex.Runtime
 
         // 1 canvas unit = 1 mm, so sizes below read as millimetres at the panel.
         private const float MetresPerCanvasUnit = 0.001f;
-        private static readonly Vector2 PanelSize = new Vector2(760f, 330f);
+        private static readonly Vector2 PanelSize = new Vector2(760f, 250f);
 
         private Text? _text;
         private float _nextRefresh;
