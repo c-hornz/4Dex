@@ -70,7 +70,7 @@ namespace FourDex.Tests.EditMode
             Press(_keyboard.rKey);
             DesktopCommands c = DesktopTestMode.ReadDevices(_keyboard, null, false, 0f, 0f);
 
-            string text = DesktopTestMode.DescribeInput(_keyboard, c);
+            string text = DesktopTestMode.DescribeInput(_keyboard, null, c);
 
             StringAssert.Contains("KEYS  R", text);
             StringAssert.Contains("anaKata +", text);
@@ -142,9 +142,43 @@ namespace FourDex.Tests.EditMode
         [Test]
         public void Monitor_SaysNone_WhenIdle()
         {
-            string text = DesktopTestMode.DescribeInput(_keyboard, default);
+            string text = DesktopTestMode.DescribeInput(_keyboard, null, default);
             StringAssert.Contains("KEYS  (none)", text);
             StringAssert.Contains("CMD  (none)", text);
+            StringAssert.Contains("MOUSE  (no mouse)", text);
+        }
+
+        [Test]
+        public void RightDrag_TurnsIntoHeadLook_OnlyWhileTheHeadIsSimulated()
+        {
+            var mouse = InputSystem.AddDevice<Mouse>();
+            Press(mouse.rightButton);
+            Set(mouse.delta, new UnityEngine.Vector2(20f, 10f));
+
+            // Simulated head: the drag becomes look. Positive x turns right; screen-up is a negative pitch, which
+            // the source treats as looking up.
+            DesktopCommands look = DesktopTestMode.ReadDevices(_keyboard, mouse, readLook: true, 0.1f, 0.1f);
+            Assert.AreEqual(2f, look.LookDegrees.x, 1e-4f);
+            Assert.AreEqual(-1f, look.LookDegrees.y, 1e-4f);
+
+            // Real HMD: the same drag produces nothing, because the headset owns the head.
+            DesktopCommands none = DesktopTestMode.ReadDevices(_keyboard, mouse, readLook: false, 0.1f, 0.1f);
+            Assert.AreEqual(UnityEngine.Vector2.zero, none.LookDegrees);
+        }
+
+        [Test]
+        public void Monitor_ShowsTheMouse_SoADeadDragCanBeToldApartFromADeadHead()
+        {
+            var mouse = InputSystem.AddDevice<Mouse>();
+            Press(mouse.rightButton);
+            Set(mouse.delta, new UnityEngine.Vector2(12f, -4f));
+
+            DesktopCommands c = DesktopTestMode.ReadDevices(_keyboard, mouse, readLook: true, 0.1f, 0.1f);
+            string text = DesktopTestMode.DescribeInput(_keyboard, mouse, c);
+
+            StringAssert.Contains("MOUSE  RMB", text);
+            StringAssert.Contains("move (+12.0, -4.0)", text);
+            StringAssert.Contains("look (+1.2, +0.4) deg", text);
         }
     }
 }

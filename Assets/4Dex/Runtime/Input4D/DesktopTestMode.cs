@@ -171,7 +171,8 @@ namespace FourDex.Runtime
 
         // Pulled by the HUD at its own refresh rate, so the monitor costs nothing between refreshes.
         private string BuildHelp() =>
-            (IsSimulatingHead ? "" : "(head: real HMD)\n") + Legend + "\n" + DescribeInput(Keyboard.current, _lastCommands);
+            (IsSimulatingHead ? "(head: simulated, mouse look on)\n" : "(head: real HMD, mouse look off)\n") +
+            Legend + "\n" + DescribeInput(Keyboard.current, Mouse.current, _lastCommands);
 
         /// <summary>Turns the current device state into commands. Static so tests can drive it with simulated devices.</summary>
         /// <param name="readLook">Mouse look applies only while the head is simulated.</param>
@@ -215,10 +216,15 @@ namespace FourDex.Runtime
         }
 
         /// <summary>
-        /// Two monitor lines: the keys the Input System reports as held (by their layout name), and the
-        /// nonzero 4D commands they produced this frame.
+        /// Three monitor lines: the keys the Input System reports as held (by their layout name), the mouse's buttons
+        /// and movement, and the nonzero 4D commands they produced this frame.
         /// </summary>
-        public static string DescribeInput(Keyboard? k, in DesktopCommands c)
+        /// <remarks>
+        /// The mouse line answers the question the keys line cannot: whether a drag is reaching the game at all, and
+        /// whether it turned into head look. No look with the button down and movement arriving means the head is not
+        /// being simulated, not that the mouse is being missed.
+        /// </remarks>
+        public static string DescribeInput(Keyboard? k, Mouse? m, in DesktopCommands c)
         {
             var sb = new StringBuilder("KEYS ");
             int held = 0;
@@ -236,6 +242,28 @@ namespace FourDex.Runtime
                 sb.Append(" (no keyboard)");
             else if (held == 0)
                 sb.Append(" (none)");
+
+            sb.Append("\nMOUSE ");
+            if (m == null)
+            {
+                sb.Append(" (no mouse)");
+            }
+            else
+            {
+                int buttons = 0;
+                if (m.leftButton.isPressed) { sb.Append(" LMB"); buttons++; }
+                if (m.rightButton.isPressed) { sb.Append(" RMB"); buttons++; }
+                if (m.middleButton.isPressed) { sb.Append(" MMB"); buttons++; }
+                if (buttons == 0)
+                    sb.Append(" (no buttons)");
+
+                Vector2 delta = m.delta.ReadValue();
+                sb.Append("  move ").Append(Pair(delta.x, delta.y));
+                float wheel = m.scroll.ReadValue().y;
+                if (wheel != 0f)
+                    sb.Append("  wheel ").Append(wheel.ToString("+0;-0;0"));
+                sb.Append("  look ").Append(Pair(c.LookDegrees.x, c.LookDegrees.y)).Append(" deg");
+            }
 
             sb.Append("\nCMD ");
             int start = sb.Length;
@@ -255,6 +283,8 @@ namespace FourDex.Runtime
                 sb.Append(" (none)");
             return sb.ToString();
         }
+
+        private static string Pair(float x, float y) => $"({x:+0.0;-0.0;0}, {y:+0.0;-0.0;0})";
 
         private static void AppendIf(StringBuilder sb, string label, float value)
         {
