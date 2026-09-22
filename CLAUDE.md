@@ -15,10 +15,8 @@ substitute a different design.
 
 ## Current status
 
-Milestone 0 in progress, on Windows. `src/4Dex.Math4D` and `tests/4Dex.Tests`
-are written but **have never been compiled** — the .NET 10 SDK was being
-installed when work paused. First action next session: `dotnet test
-4Dex.Core.sln` and fix whatever fails. Still to do for Milestone 0: World4D,
+Milestone 0 in progress, on Windows. `src/4Dex.Math4D` builds and
+`tests/4Dex.Tests` passes (62/62, .NET SDK 10.0.401). Still to do for Milestone 0: World4D,
 the Unity project (URP + OpenXR/Oculus), Player4DState (owns the focusW /
 position.w invariants), HmdPoseSource/XRRig, CoordinateHUD, Lab4D scene.
 
