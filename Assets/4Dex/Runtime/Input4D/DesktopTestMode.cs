@@ -30,7 +30,8 @@ namespace FourDex.Runtime
         }
 
         public const string Legend =
-            "MOVE  WASD walk   R / F ana / kata   Shift fast      HEAD  RMB-drag look   Q / E roll   T / G lean\n" +
+            "MOVE  WASD walk   R / F ana / kata   Shift fast\n" +
+            "HEAD  Alt+arrows look   RMB-drag or M capture   Q / E roll   T / G lean\n" +
             "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel   SURVEY  hold Space\n" +
             "MAPPING  P profile   X freeze   C recenter      PANELS  Tab parameters   V W-slice   H this help\n" +
             "RESET  Backspace view + focus + CLASSIC mapping   Shift+Backspace everything";
@@ -58,6 +59,23 @@ namespace FourDex.Runtime
 
         public bool IsSimulatingHead => _simulatedHead != null;
 
+        private bool _mouseCaptured;
+
+        /// <summary>
+        /// Locks and hides the cursor, and lets mouse look work without holding a button. M toggles it. Useful where
+        /// the Game view receives mouse movement but not button presses.
+        /// </summary>
+        public bool MouseCaptured
+        {
+            get => _mouseCaptured;
+            set
+            {
+                _mouseCaptured = value;
+                Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
+                Cursor.visible = !value;
+            }
+        }
+
         private void OnEnable()
         {
             bool simulate = _headMode == HeadMode.AlwaysSimulate ||
@@ -78,6 +96,7 @@ namespace FourDex.Runtime
                 _rig.PoseSource = _previousSource;
             _simulatedHead = null;
             _previousSource = null;
+            MouseCaptured = false; // never leave the cursor locked after play stops
             if (_hud != null)
                 _hud.Help = null;
         }
@@ -87,8 +106,11 @@ namespace FourDex.Runtime
             if (_player == null)
                 return;
 
+            if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+                MouseCaptured = !MouseCaptured;
+
             _lastCommands = ReadDevices(Keyboard.current, Mouse.current, _simulatedHead != null,
-                _lookSensitivity, _focusWheelStep);
+                _lookSensitivity, _focusWheelStep, MouseCaptured);
             Quaternion headYaw = _simulatedHead != null
                 ? _simulatedHead.YawRotation
                 : Quaternion.Euler(0f, _rig != null ? _rig.LastPose.Rotation.eulerAngles.y : 0f, 0f);
@@ -171,12 +193,18 @@ namespace FourDex.Runtime
 
         // Pulled by the HUD at its own refresh rate, so the monitor costs nothing between refreshes.
         private string BuildHelp() =>
-            (IsSimulatingHead ? "(head: simulated, mouse look on)\n" : "(head: real HMD, mouse look off)\n") +
+            (IsSimulatingHead ? "(head: simulated, mouse look on" : "(head: real HMD, mouse look off") +
+            (MouseCaptured ? ", cursor captured)\n" : ")\n") +
             Legend + "\n" + DescribeInput(Keyboard.current, Mouse.current, _lastCommands);
 
         /// <summary>Turns the current device state into commands. Static so tests can drive it with simulated devices.</summary>
         /// <param name="readLook">Mouse look applies only while the head is simulated.</param>
-        public static DesktopCommands ReadDevices(Keyboard? k, Mouse? m, bool readLook, float lookSensitivity, float focusWheelStep)
+        /// <param name="captureMouse">
+        /// With the cursor captured, dragging needs no button: some setups deliver mouse movement to the Game view
+        /// but not its buttons.
+        /// </param>
+        public static DesktopCommands ReadDevices(Keyboard? k, Mouse? m, bool readLook, float lookSensitivity,
+            float focusWheelStep, bool captureMouse = false)
         {
             var c = new DesktopCommands();
 
@@ -191,8 +219,13 @@ namespace FourDex.Runtime
                 c.XW = Axis(k.lKey, k.jKey);
                 c.YW = Axis(k.oKey, k.uKey);
                 c.ZW = Axis(k.iKey, k.kKey);
-                // Math4D XZ + turns X toward Z, which is a turn to the left; Right arrow turns right.
-                c.XZ = Axis(k.leftArrowKey, k.rightArrowKey);
+                // Alt makes the arrows look around instead: keyboard head look, for when mouse input never arrives
+                // in the Game view. Plain arrows keep turning the 4D view in XZ.
+                if (k.altKey.isPressed)
+                    c.LookKeys = new Vector2(Axis(k.rightArrowKey, k.leftArrowKey), Axis(k.upArrowKey, k.downArrowKey));
+                else
+                    // Math4D XZ + turns X toward Z, which is a turn to the left; Right arrow turns right.
+                    c.XZ = Axis(k.leftArrowKey, k.rightArrowKey);
                 c.Focus = Axis(k.rightBracketKey, k.leftBracketKey);
                 c.Fast = k.shiftKey.isPressed;
                 bool reset = k.backspaceKey.wasPressedThisFrame;
@@ -205,7 +238,7 @@ namespace FourDex.Runtime
                 float wheel = m.scroll.ReadValue().y;
                 if (wheel != 0f)
                     c.FocusStep = Mathf.Sign(wheel) * focusWheelStep;
-                if (readLook && m.rightButton.isPressed)
+                if (readLook && (captureMouse || m.rightButton.isPressed))
                 {
                     Vector2 delta = m.delta.ReadValue();
                     c.LookDegrees = new Vector2(delta.x, -delta.y) * lookSensitivity;
@@ -269,6 +302,7 @@ namespace FourDex.Runtime
             int start = sb.Length;
             AppendIf(sb, "walk", c.Walk.x, c.Walk.y);
             AppendIf(sb, "anaKata", c.AnaKata);
+            AppendIf(sb, "look", c.LookKeys.x, c.LookKeys.y);
             AppendIf(sb, "headRoll", c.HeadRoll);
             AppendIf(sb, "headLean", c.HeadLean);
             AppendIf(sb, "XW", c.XW);

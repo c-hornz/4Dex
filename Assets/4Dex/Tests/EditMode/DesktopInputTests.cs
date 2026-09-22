@@ -167,6 +167,49 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void AltArrows_LookAround_AndPlainArrowsStillRotateTheView()
+        {
+            // The keyboard fallback for setups where mouse input never reaches the Game view.
+            Press(_keyboard.altKey);
+            Press(_keyboard.upArrowKey);
+            DesktopCommands look = DesktopTestMode.ReadDevices(_keyboard, null, true, 0f, 0f);
+            Assert.AreEqual(1f, look.LookKeys.y, "Alt+Up looks up");
+            Assert.AreEqual(0f, look.XZ, "and does not turn the 4D view");
+            Release(_keyboard.altKey);
+
+            DesktopCommands rotate = DesktopTestMode.ReadDevices(_keyboard, null, true, 0f, 0f);
+            Assert.AreEqual(0f, rotate.LookKeys.y);
+            Release(_keyboard.upArrowKey);
+
+            Press(_keyboard.leftArrowKey);
+            Assert.AreEqual(1f, DesktopTestMode.ReadDevices(_keyboard, null, true, 0f, 0f).XZ, "plain arrows still rotate");
+            Release(_keyboard.leftArrowKey);
+        }
+
+        [Test]
+        public void KeyboardLook_TurnsTheSimulatedHead()
+        {
+            var head = new FourDex.XR.SimulatedHmdPoseSource();
+            var speeds = DesktopSpeeds.Default;
+            var commands = new DesktopCommands { LookKeys = new UnityEngine.Vector2(1f, 1f) };
+
+            DesktopControls.Apply(new FourDex.Player.Player4DState(), head, UnityEngine.Quaternion.identity, commands, speeds, 1f);
+
+            Assert.AreEqual(speeds.HeadLook, head.Yaw, 1e-3f, "turns right");
+            Assert.AreEqual(-speeds.HeadLook, head.Pitch, 1e-3f, "and looks up");
+        }
+
+        [Test]
+        public void CapturedCursor_LooksWithoutHoldingAButton()
+        {
+            var mouse = InputSystem.AddDevice<Mouse>();
+            Set(mouse.delta, new UnityEngine.Vector2(10f, 0f));
+
+            Assert.AreEqual(0f, DesktopTestMode.ReadDevices(_keyboard, mouse, true, 0.1f, 0f).LookDegrees.x);
+            Assert.AreEqual(1f, DesktopTestMode.ReadDevices(_keyboard, mouse, true, 0.1f, 0f, captureMouse: true).LookDegrees.x, 1e-4f);
+        }
+
+        [Test]
         public void Monitor_ShowsTheMouse_SoADeadDragCanBeToldApartFromADeadHead()
         {
             var mouse = InputSystem.AddDevice<Mouse>();

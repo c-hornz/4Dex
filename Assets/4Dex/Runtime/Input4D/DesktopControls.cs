@@ -15,6 +15,12 @@ namespace FourDex.Runtime
         /// <summary>Simulated head only: roll rate (-1..1) and lean rate (-1..1, + forward), to exercise head mappings.</summary>
         public float HeadRoll, HeadLean;
 
+        /// <summary>
+        /// Simulated head look from the keyboard: x turns right, y looks up, each -1..1. The mouse does the same job
+        /// through <see cref="LookDegrees"/>; this exists because mouse input does not always reach the Game view.
+        /// </summary>
+        public Vector2 LookKeys;
+
         /// <summary>Walk: x = strafe right, y = forward. Head-relative, in the player's own 3-space.</summary>
         public Vector2 Walk;
 
@@ -45,6 +51,7 @@ namespace FourDex.Runtime
         [Tooltip("Rotation through the 4D planes, degrees per second.")] public float Rotate;
         [Tooltip("focusW change, W units per second.")] public float Focus;
         [Tooltip("Multiplier while Shift is held.")] public float FastMultiplier;
+        [Tooltip("Simulated head look from the keyboard, degrees per second.")] public float HeadLook;
         [Tooltip("Simulated head roll, degrees per second.")] public float HeadRoll;
         [Tooltip("Simulated head lean, metres per second.")] public float HeadLean;
 
@@ -55,6 +62,7 @@ namespace FourDex.Runtime
             Rotate = 45f,
             Focus = 0.5f,
             FastMultiplier = 3f,
+            HeadLook = 75f,
             HeadRoll = 40f,
             HeadLean = 0.25f,
         };
@@ -88,7 +96,10 @@ namespace FourDex.Runtime
 
             float scale = c.Fast ? speeds.FastMultiplier : 1f;
 
-            head?.Look(c.LookDegrees.x, c.LookDegrees.y);
+            // Mouse look and keyboard look add up: whichever of the two is reaching the game does the work.
+            // Look() takes Unity pitch, where positive looks down, so looking up is a negative step.
+            head?.Look(c.LookDegrees.x + c.LookKeys.x * speeds.HeadLook * dt,
+                c.LookDegrees.y - c.LookKeys.y * speeds.HeadLook * dt);
             head?.Tilt(c.HeadRoll * speeds.HeadRoll * dt);
             head?.LeanBy(c.HeadLean * speeds.HeadLean * dt);
 
