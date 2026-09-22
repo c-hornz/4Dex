@@ -7,6 +7,7 @@
         "4Dex.Math4D",
         "4Dex.World4D",
         "4Dex.Player4D",
+        "4Dex.Perception4D",
         "Unity.InputSystem",
         "Unity.InputSystem.TestFramework",
         "UnityEngine.TestRunner",

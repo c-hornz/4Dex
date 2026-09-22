@@ -25,6 +25,7 @@ namespace FourDex.EditorTools
     {
         public const string ScenePath = "Assets/Scenes/Lab4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
+        private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
 
         private static readonly Color Background = new Color(0.08f, 0.09f, 0.11f);
 
@@ -44,8 +45,8 @@ namespace FourDex.EditorTools
             // From behind and above the viewer, so the faces the player sees are the lit ones.
             light.transform.rotation = Quaternion.Euler(35f, 25f, 0f);
 
-            Material objectMaterial = GetOrCreateMaterial("LabObject", new Color(0.82f, 0.82f, 0.82f));
-            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.22f, 0.23f, 0.25f));
+            Material objectMaterial = GetOrCreateMaterial("LabObject", new Color(0.82f, 0.82f, 0.82f), "4Dex/Phase4D");
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.22f, 0.23f, 0.25f), "Universal Render Pipeline/Lit");
 
             // Plain 3D, not a 4D object: a stable conventional reference for comfort and for judging head tracking.
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -74,10 +75,12 @@ namespace FourDex.EditorTools
             Set(driver, "_world", registry);
             Set(driver, "_player", player);
             Set(driver, "_viewSpace", rigGo.transform);
+            Set(driver, "_perception", GetOrCreatePerceptionSettings());
 
             var hud = head.AddComponent<CoordinateHUD>();
             Set(hud, "_player", player);
             Set(hud, "_rig", rig);
+            Set(hud, "_projection", driver);
 
             // Keyboard 4D controls always; mouse-look head only when no headset is active.
             var desktop = worldGo.AddComponent<DesktopTestMode>();
@@ -113,6 +116,7 @@ namespace FourDex.EditorTools
 
         /// <summary>
         /// Renders the lab from the XR camera's placeholder pose to a PNG, HUD included, without saving the scene.
+        /// Optional <c>-playerW</c> and <c>-focusW</c> set the 4D state first, for checking perception headlessly.
         /// Batch (graphics needed, so no -nographics): <c>-executeMethod FourDex.EditorTools.Lab4DSceneBuilder.Snapshot -snapshotPath out.png</c>.
         /// </summary>
         public static void Snapshot()
@@ -122,6 +126,17 @@ namespace FourDex.EditorTools
             string path = i >= 0 && i + 1 < args.Length ? args[i + 1] : Path.Combine("Temp", "Lab4D.png");
 
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            // Edit mode runs no OnEnable or LateUpdate: register and project by hand, at the requested 4D state.
+            var registry = Object.FindAnyObjectByType<World4DRegistry>();
+            var player = Object.FindAnyObjectByType<Player4D>();
+            var driver = Object.FindAnyObjectByType<ProjectionDriver>();
+            foreach (Object4DBehaviour o in Object.FindObjectsByType<Object4DBehaviour>().OrderBy(o => o.name))
+                registry.Register(o);
+            player.State.MoveAnaKata(FloatArg(args, "-playerW", 0f));
+            player.State.SetFocusW(FloatArg(args, "-focusW", 0f));
+            driver.ProjectAll();
+
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
             // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
@@ -147,6 +162,15 @@ namespace FourDex.EditorTools
             Debug.Log($"[4Dex] Snapshot written to {Path.GetFullPath(path)}.");
         }
 
+        private static float FloatArg(string[] args, string name, float fallback)
+        {
+            int i = Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length &&
+                   float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v)
+                ? v
+                : fallback;
+        }
+
         private static Object4DBehaviour AddObject(GameObject parent, string name, PrimitiveType shape, Material material,
             Vector4 position, Vector4 halfExtents, PlaneAngles rotationDegrees)
         {
@@ -158,6 +182,7 @@ namespace FourDex.EditorTools
             Object.DestroyImmediate(go.GetComponent<Collider>());
 
             var obj = go.AddComponent<Object4DBehaviour>();
+            go.AddComponent<PhaseRenderer>();
             var so = new SerializedObject(obj);
             so.FindProperty("_position").vector4Value = position;
             so.FindProperty("_halfExtents").vector4Value = halfExtents;
@@ -172,19 +197,44 @@ namespace FourDex.EditorTools
             return obj;
         }
 
-        private static Material GetOrCreateMaterial(string name, Color color)
+        private static Material GetOrCreateMaterial(string name, Color color, string shaderName)
         {
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null)
+                throw new InvalidOperationException($"[4Dex] Shader '{shaderName}' not found.");
+
             string path = $"{MaterialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null)
+            {
+                // Keep the asset (and its GUID); only switch the shader if it changed.
+                if (material.shader != shader)
+                {
+                    material.shader = shader;
+                    material.SetColor("_BaseColor", color);
+                    EditorUtility.SetDirty(material);
+                }
                 return material;
+            }
 
             Directory.CreateDirectory(MaterialFolder);
-            material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = name };
+            material = new Material(shader) { name = name };
             material.SetColor("_BaseColor", color);
             material.SetFloat("_Smoothness", 0.2f);
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        private static PerceptionSettings GetOrCreatePerceptionSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<PerceptionSettings>(PerceptionSettingsPath);
+            if (settings != null)
+                return settings;
+            Directory.CreateDirectory(Path.GetDirectoryName(PerceptionSettingsPath)!);
+            settings = ScriptableObject.CreateInstance<PerceptionSettings>();
+            AssetDatabase.CreateAsset(settings, PerceptionSettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
         }
 
         private static void PutFirstInBuildSettings(string scenePath)

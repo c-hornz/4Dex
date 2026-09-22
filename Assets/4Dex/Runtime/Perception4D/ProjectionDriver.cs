@@ -1,15 +1,17 @@
+using System;
 using FourDex.Math4D;
+using FourDex.Perception;
 using FourDex.World;
 using UnityEngine;
 
 namespace FourDex.Runtime
 {
     /// <summary>
-    /// Each frame, projects every registered 4D object into the player's 3D slice and places its GameObject there.
-    /// Also records each object's signed <c>DeltaW</c> for the perception channels.
+    /// Each frame, projects every registered 4D object into the player's 3D slice and places its GameObject there,
+    /// then evaluates its perception channels from its signed W gap and hands them to its <see cref="PhaseRenderer"/>.
     /// </summary>
     /// <remarks>
-    /// Minimal Milestone 0 version of ARCHITECTURE §8's ProjectionDriver: placement and DeltaW only, no shaders.
+    /// One loop, in a fixed order, instead of an Update per object. Without <see cref="PerceptionSettings"/> it only places objects.
     /// Objects are rigid (ARCHITECTURE §9, risk 1). A rotation through W turns the object's 3D footprint but does
     /// not re-slice its shape; true cross-sections come later.
     /// </remarks>
@@ -22,7 +24,14 @@ namespace FourDex.Runtime
         [Tooltip("The tracking-space root, i.e. the XRRig. Projected coordinates are in the player's frame, which is this space. Empty: Unity world space.")]
         [SerializeField] private Transform? _viewSpace;
 
+        [Tooltip("Perception tuning. Empty: objects are placed but not perception-rendered.")]
+        [SerializeField] private PerceptionSettings? _perception;
+
         private readonly IProjection4 _projection = new SliceProjection();
+
+        public PerceptionSettings? Perception => _perception;
+
+        public World4DRegistry? World => _world;
 
         private void LateUpdate() => ProjectAll();
 
@@ -35,6 +44,11 @@ namespace FourDex.Runtime
             float focusW = _player.State.FocusW;
             Rotor4 toViewer = viewer.Rotation.Inverse();
 
+            // Validated once per frame, so inspector edits apply live and a bad value degrades instead of breaking.
+            PerceptionParameters? parameters = _perception != null ? _perception.Parameters.Validated() : null;
+            if (_perception != null)
+                _perception.PushGlobals();
+
             foreach (Object4DBehaviour member in _world.Members)
             {
                 Object4D? body = member.Body;
@@ -45,12 +59,22 @@ namespace FourDex.Runtime
                 member.LastProjection = p;
                 member.DeltaW = p.DeltaW(focusW);
 
+                Rotor4 relative = body.Transform.Rotation.Then(toViewer);
+                float halfExtentW = ViewerWHalfExtent(relative, body.HalfExtents);
+                member.WGap = PerceptionModel.SignedGap(p.W, halfExtentW, focusW);
+                if (parameters != null)
+                {
+                    member.Channels = PerceptionModel.Evaluate(member.WGap, parameters);
+                    if (member.Phase != null)
+                        member.Phase.Apply(member.Channels, _perception!.MaxShimmerHz);
+                }
+
                 Vector3 position = new Vector3(p.X, p.Y, p.Z);
                 // Fallback keeps last frame's footprint, expressed in view space like the new one would be.
                 Quaternion rotation = _viewSpace != null
                     ? Quaternion.Inverse(_viewSpace.rotation) * member.transform.rotation
                     : member.transform.rotation;
-                if (TryFootprintRotation(body.Transform.Rotation.Then(toViewer), out Quaternion footprint))
+                if (TryFootprintRotation(relative, out Quaternion footprint))
                     rotation = footprint;
 
                 if (_viewSpace != null)
@@ -62,6 +86,16 @@ namespace FourDex.Runtime
                 member.transform.localScale = 2f * body.HalfExtents.Xyz();
             }
         }
+
+        /// <summary>
+        /// Half the object's extent along the viewer's W axis: how far it reaches ana and kata of its centre as this
+        /// viewer sees it. Turning an object through W moves its X/Y/Z extent into W, and this follows.
+        /// </summary>
+        private static float ViewerWHalfExtent(Rotor4 relative, Vec4 halfExtents) =>
+            MathF.Abs(relative.Apply(Vec4.UnitX).W) * halfExtents.X +
+            MathF.Abs(relative.Apply(Vec4.UnitY).W) * halfExtents.Y +
+            MathF.Abs(relative.Apply(Vec4.UnitZ).W) * halfExtents.Z +
+            MathF.Abs(relative.Apply(Vec4.UnitW).W) * halfExtents.W;
 
         /// <summary>
         /// Unity orientation from the 3D parts of the object's local Y and Z axes, as seen by the viewer. Exact for

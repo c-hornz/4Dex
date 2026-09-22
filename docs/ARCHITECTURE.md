@@ -166,8 +166,13 @@ perception model, so paying for it would be waste.
 
 Milestone 1 needs one shader, `Phase4D`, plus a shared `Phase4DCommon.hlsl`:
 
-- Per-object `_DeltaW` via `MaterialPropertyBlock` — no material duplication,
-  instancing preserved.
+- Per-object values via `MaterialPropertyBlock`, so there's no material
+  duplication. *As built:* the mapping from W gap to channels runs in C#
+  (`FourDex.Perception.PerceptionModel`, engine-free and unit-tested). The
+  block carries the resulting channels (density, coherence, phase
+  frequency/velocity/amplitude, tint, edge weight), not a raw `_DeltaW`. That
+  keeps one tested source for the mapping while objects are rigid, with one
+  gap each. It must move to HLSL once geometry carries per-vertex W.
 - Global perception constants (`focusW`, `focusWidth`, band thresholds A/B/C,
   phase frequency / amplitude / velocity, palette) from one `PerceptionSettings`
   ScriptableObject.

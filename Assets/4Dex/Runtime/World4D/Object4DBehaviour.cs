@@ -1,4 +1,5 @@
 using FourDex.Math4D;
+using FourDex.Perception;
 using FourDex.World;
 using UnityEngine;
 
@@ -37,6 +38,32 @@ namespace FourDex.Runtime
         /// the sign is what keeps ana and kata apart (SPEC §8).
         /// </summary>
         public float DeltaW { get; internal set; }
+
+        /// <summary>
+        /// Signed W distance from the focus slice to the nearest part of the object, accounting for its W extent as the
+        /// viewer sees it. Zero while the slice passes through it. What the perception channels are computed from.
+        /// </summary>
+        public float WGap { get; internal set; }
+
+        /// <summary>This frame's perception channels. Written by <c>ProjectionDriver</c> when it has PerceptionSettings.</summary>
+        public PerceptionChannels Channels { get; internal set; }
+
+        private PhaseRenderer? _phase;
+        private bool _phaseLookedUp;
+
+        internal PhaseRenderer? Phase
+        {
+            get
+            {
+                // Looked up once, so objects without one don't pay GetComponent every frame.
+                if (!_phaseLookedUp)
+                {
+                    _phase = GetComponent<PhaseRenderer>();
+                    _phaseLookedUp = true;
+                }
+                return _phase;
+            }
+        }
 
         public Transform4 AuthoredTransform => new Transform4(_position.ToVec4(), _rotationDegrees.ToRotor());
 

@@ -47,7 +47,25 @@ orthonormality error, raw HMD pose. Its text comes from the pure
 Change the builder and rerun it rather than hand-editing the scene. Its
 `Snapshot` method renders the XR camera's view to a PNG headlessly (needs
 graphics, so omit `-nographics`; pass `-snapshotPath <png>`). Use it to check
-visual changes. `docs/images/lab4d-m0.png` is the reference render.
+visual changes. `-playerW <w>` and `-focusW <w>` set the 4D state first.
+`docs/images/lab4d-m1-focus*.png` are the reference renders.
+
+**Milestone 1 (W-focus)**: the acceptance test passes on the desktop, both in
+tests and in renders. Pieces:
+- `src/4Dex.Perception4D`: engine-free mapping from signed W gap to SPEC §11
+  band + channels, with swappable curves.
+- `PerceptionSettings` asset (`Assets/4Dex/Settings/`): all tuning. Edit it live
+  in play; it persists, so it doubles as a saved preset.
+- `Phase4D` shader: dither-to-opaque on an object-fixed lattice, phase stripes
+  rising for ana and sinking for kata, shimmer from focus mismatch, palette as a
+  redundant cue.
+- `PhaseRenderer`: puts the channels in each object's property block.
+- `ProjectionDriver`: gap from the object's W extent in the viewer's frame.
+- HUD: per-object gap/band/V lines.
+
+Not built yet from ARCHITECTURE §8: `WSliceViewer` and an in-VR
+`RuntimeParameterPanel`. On the desktop, the settings asset's inspector serves
+as the panel. The mapping runs in C#, not HLSL; see ARCHITECTURE §6.
 
 **Desktop test mode** (`Runtime/Input4D/DesktopTestMode`, on the World4D root):
 the keyboard drives SPEC §7's three operations whether or not a headset is

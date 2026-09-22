@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using FourDex.Math4D;
+using FourDex.Perception;
 using FourDex.Player;
 using FourDex.XR;
 using UnityEngine;
@@ -16,7 +18,9 @@ namespace FourDex.Runtime
         // Below this, a basis component or W offset prints as exactly zero rather than as float noise.
         private const float Epsilon = 5e-4f;
 
-        public static string Format(Player4DState? player, HmdPose? head, float? focusWidth = null)
+        /// <param name="objects">Optional per-object perception state, one line each: the M1 check that focus picks the right object.</param>
+        public static string Format(Player4DState? player, HmdPose? head, float? focusWidth = null,
+            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null)
         {
             var sb = new StringBuilder(512);
 
@@ -47,6 +51,17 @@ namespace FourDex.Runtime
                   .Append(b.OrthonormalityError().ToString("0.0e+0", CultureInfo.InvariantCulture)).Append('\n');
             }
 
+            if (objects != null)
+            {
+                foreach ((string name, PerceptionChannels c) in objects)
+                {
+                    sb.Append("  ").Append(name.PadRight(3)).Append(" gap ").Append(Num(c.SignedGap))
+                      .Append(' ').Append(BandLabel(c.Band))
+                      .Append("  V ").Append(c.Visibility.ToString("0.00", CultureInfo.InvariantCulture))
+                      .Append('\n');
+                }
+            }
+
             if (head is HmdPose h)
             {
                 Vector3 e = h.Rotation.eulerAngles;
@@ -61,6 +76,14 @@ namespace FourDex.Runtime
 
             return sb.ToString();
         }
+
+        public static string BandLabel(OcclusionBand band) => band switch
+        {
+            OcclusionBand.Local => "LOCAL  ",
+            OcclusionBand.NearW => "NEAR_W ",
+            OcclusionBand.FarW => "FAR_W  ",
+            _ => "OUTSIDE",
+        };
 
         /// <summary>Focus is measured along the player's own W: positive is ana of the player.</summary>
         public static string FocusSide(float focusW) =>

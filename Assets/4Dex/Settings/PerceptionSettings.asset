@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2db8c3acf9ef99749ae883f4eb3f2657, type: 3}
+  m_Name: PerceptionSettings
+  m_EditorClassIdentifier: 4Dex.Runtime::FourDex.Runtime.PerceptionSettings
+  Parameters:
+    FocusWidth: 0.35
+    Curve: 0
+    BandA: 0.15
+    BandB: 0.6
+    BandC: 1.5
+    NearMinDensity: 0.35
+    FarDensity: 0.25
+    PhaseBaseFrequency: 2
+    PhaseFrequencyPerW: 6
+    PhaseVelocity: 0.6
+    PhaseAmplitude: 0.6
+    InvertPhaseDirection: 0
+    TintSaturationW: 1
+  AnaColor: {r: 0.35, g: 0.72, b: 1, a: 1}
+  KataColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  TintStrength: 0.6
+  DitherCellsPerMetre: 90
+  MaxShimmerHz: 12

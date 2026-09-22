@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Engine-free perception mapping: W gap to visibility, band and render channels (SPEC §8, §9, §11).
+    Here rather than under Assets/ so the mappings are tested without Unity; the shader only renders the channels.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>4Dex.Perception4D</AssemblyName>
+    <RootNamespace>FourDex.Perception</RootNamespace>
+  </PropertyGroup>
+
+</Project>
