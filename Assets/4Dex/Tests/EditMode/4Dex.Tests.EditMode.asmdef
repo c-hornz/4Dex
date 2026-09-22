@@ -3,6 +3,10 @@
     "rootNamespace": "FourDex.Tests.EditMode",
     "references": [
         "4Dex.XR",
+        "4Dex.Runtime",
+        "4Dex.Math4D",
+        "4Dex.World4D",
+        "4Dex.Player4D",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

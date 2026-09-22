@@ -31,10 +31,15 @@ XR Management 4.7.0). XR is configured by `Assets/4Dex/Editor/XRProjectSetup.cs`
 profile. It is idempotent; rerun it rather than clicking through Project Settings.
 `Assets/4Dex/Runtime/XR` has XRRig + HmdPoseSource (camera gets the raw pose
 first, then `PoseSampled` fans it out to the 4D mapping). Its invariants are
-Unity EditMode tests in `Assets/4Dex/Tests/EditMode` (4/4 passing). They have
-not yet run against a real headset.
-Still to do for Milestone 0: the MonoBehaviour wrappers (Player4D,
-Object4DBehaviour/World4DRegistry), CoordinateHUD, Lab4D scene.
+Unity EditMode tests in `Assets/4Dex/Tests/EditMode`. They have not yet run
+against a real headset.
+`Assets/4Dex/Runtime` (asmdef `4Dex.Runtime`) wraps the cores for scenes:
+`Player4D`, `World4DRegistry` + `Object4DBehaviour` (inspector-authored 4D pose),
+and a minimal `ProjectionDriver`, pulled forward from Milestone 1. It places
+objects in the player's slice each frame and records signed `DeltaW`; there are
+no shaders yet. An object's Unity transform is *output*, overwritten every frame;
+author it in 4D. Unity tests: 10/10 passing.
+Still to do for Milestone 0: CoordinateHUD, Lab4D scene.
 
 Unity runs headless, so Unity-side code can be compiled without the user:
 
