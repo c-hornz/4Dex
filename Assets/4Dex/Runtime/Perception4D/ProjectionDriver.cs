@@ -61,6 +61,7 @@ namespace FourDex.Runtime
 
                 Rotor4 relative = body.Transform.Rotation.Then(toViewer);
                 float halfExtentW = ViewerWHalfExtent(relative, body.HalfExtents);
+                member.ViewerHalfExtentW = halfExtentW;
                 member.WGap = PerceptionModel.SignedGap(p.W, halfExtentW, focusW);
                 if (parameters != null)
                 {

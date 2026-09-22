@@ -9,12 +9,9 @@ namespace FourDex.Runtime
 {
     /// <summary>
     /// Head-locked coordinate readout, visible in the headset and on the desktop mirror (SPEC §20).
-    /// Put it on the XR camera. It builds its own world-space canvas, so it needs no prefab or font asset.
+    /// Put it on the XR camera; it builds its own panel (see <see cref="DebugPanel"/>).
     /// </summary>
-    /// <remarks>
-    /// World space because screen-space overlay canvases are not rendered to the HMD. Head-locked is
-    /// uncomfortable for content but right for a debug readout that must always be findable.
-    /// </remarks>
+    /// <remarks>Head-locked is uncomfortable for content but right for a debug readout that must always be findable.</remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
     public sealed class CoordinateHUD : MonoBehaviour
@@ -33,8 +30,7 @@ namespace FourDex.Runtime
 
         [SerializeField] private int _fontSize = 18;
 
-        // 1 canvas unit = 1 mm, so sizes below read as millimetres at the panel.
-        private const float MetresPerCanvasUnit = 0.001f;
+        // Canvas units are millimetres (DebugPanel).
         private const float PanelWidth = 900f;
         private const float Padding = 14f;
 
@@ -90,44 +86,11 @@ namespace FourDex.Runtime
             if (_text != null)
                 return _text;
 
-            var canvasGo = new GameObject("CoordinateHUD Canvas", typeof(RectTransform));
-            var canvasRect = (RectTransform)canvasGo.transform;
-            canvasRect.SetParent(transform, false);
-            canvasRect.pivot = new Vector2(0.5f, 1f);
-            canvasRect.localPosition = _offset;
-            canvasRect.localRotation = Quaternion.identity;
-            canvasRect.localScale = Vector3.one * MetresPerCanvasUnit;
-            canvasRect.sizeDelta = new Vector2(PanelWidth, 250f);
-
-            var canvas = canvasGo.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
-            canvas.worldCamera = GetComponent<Camera>();
-
-            var background = new GameObject("Background", typeof(RectTransform)).AddComponent<Image>();
-            Stretch(background.rectTransform, canvasRect, 0f);
-            background.color = new Color(0f, 0f, 0f, 0.65f);
-            background.raycastTarget = false;
-
-            _text = new GameObject("Text", typeof(RectTransform)).AddComponent<Text>();
-            Stretch(_text.rectTransform, canvasRect, Padding);
-            _text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            _text.fontSize = _fontSize;
-            _text.color = Color.white;
-            _text.alignment = TextAnchor.UpperLeft;
-            _text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            _text.verticalOverflow = VerticalWrapMode.Overflow;
-            _text.supportRichText = false;
-            _text.raycastTarget = false;
+            RectTransform canvas = DebugPanel.CreateCanvas(transform, "CoordinateHUD Canvas", _offset, 0f,
+                new Vector2(PanelWidth, 250f), new Vector2(0.5f, 1f));
+            _text = DebugPanel.CreateText(canvas, "Text", _fontSize, TextAnchor.UpperLeft, Color.white);
+            DebugPanel.Stretch(_text.rectTransform, canvas, Padding);
             return _text;
-        }
-
-        private static void Stretch(RectTransform child, RectTransform parent, float padding)
-        {
-            child.SetParent(parent, false);
-            child.anchorMin = Vector2.zero;
-            child.anchorMax = Vector2.one;
-            child.offsetMin = new Vector2(padding, padding);
-            child.offsetMax = new Vector2(-padding, -padding);
         }
     }
 }

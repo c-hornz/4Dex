@@ -75,18 +75,28 @@ namespace FourDex.EditorTools
             Set(driver, "_world", registry);
             Set(driver, "_player", player);
             Set(driver, "_viewSpace", rigGo.transform);
-            Set(driver, "_perception", GetOrCreatePerceptionSettings());
+            PerceptionSettings perception = GetOrCreatePerceptionSettings();
+            Set(driver, "_perception", perception);
 
             var hud = head.AddComponent<CoordinateHUD>();
             Set(hud, "_player", player);
             Set(hud, "_rig", rig);
             Set(hud, "_projection", driver);
 
+            // SPEC §20 W slice viewer (left of the HUD) and §21 parameter panel (right; Tab shows it).
+            var sliceViewer = head.AddComponent<WSliceViewer>();
+            Set(sliceViewer, "_projection", driver);
+            Set(sliceViewer, "_player", player);
+            var panel = head.AddComponent<RuntimeParameterPanel>();
+            Set(panel, "_settings", perception);
+
             // Keyboard 4D controls always; mouse-look head only when no headset is active.
             var desktop = worldGo.AddComponent<DesktopTestMode>();
             Set(desktop, "_rig", rig);
             Set(desktop, "_player", player);
             Set(desktop, "_hud", hud);
+            Set(desktop, "_panel", panel);
+            Set(desktop, "_sliceViewer", sliceViewer);
 
             // SPEC §23: A, B and C at w = 0, +1, -1. B sits to the right and C to the left, echoing +W / -W.
             var objects = new[]
@@ -116,7 +126,8 @@ namespace FourDex.EditorTools
 
         /// <summary>
         /// Renders the lab from the XR camera's placeholder pose to a PNG, HUD included, without saving the scene.
-        /// Optional <c>-playerW</c> and <c>-focusW</c> set the 4D state first, for checking perception headlessly.
+        /// Optional <c>-playerW</c> and <c>-focusW</c> set the 4D state first, for checking perception headlessly;
+        /// <c>-panel</c> shows the parameter panel.
         /// Batch (graphics needed, so no -nographics): <c>-executeMethod FourDex.EditorTools.Lab4DSceneBuilder.Snapshot -snapshotPath out.png</c>.
         /// </summary>
         public static void Snapshot()
@@ -142,6 +153,12 @@ namespace FourDex.EditorTools
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
                 hud.Footer = () => DesktopTestMode.Legend;
             hud.Refresh();
+            var sliceViewer = Object.FindAnyObjectByType<WSliceViewer>();
+            if (sliceViewer != null)
+                sliceViewer.Refresh();
+            var panel = Object.FindAnyObjectByType<RuntimeParameterPanel>();
+            if (panel != null && Array.IndexOf(args, "-panel") >= 0)
+                panel.Visible = true;
             Canvas.ForceUpdateCanvases();
 
             var camera = hud.GetComponent<Camera>();

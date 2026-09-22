@@ -63,9 +63,24 @@ tests and in renders. Pieces:
 - `ProjectionDriver`: gap from the object's W extent in the viewer's frame.
 - HUD: per-object gap/band/V lines.
 
-Not built yet from ARCHITECTURE §8: `WSliceViewer` and an in-VR
-`RuntimeParameterPanel`. On the desktop, the settings asset's inspector serves
-as the panel. The mapping runs in C#, not HLSL; see ARCHITECTURE §6.
+- Debug tools. Both are head-locked, built by `Debug4D/DebugPanel`, and go on
+  the XR camera:
+  - `WSliceViewer` (SPEC §20; V toggles): each object's W extent as a bar on
+    the player's W axis, with focus and the A/B/C bands shaded around it.
+  - `RuntimeParameterPanel` (SPEC §21; Tab shows, Up/Down select, − / =
+    adjust, Shift ×10): every parameter in `PerceptionParameterList`. Edits go
+    into the settings asset and persist. It reads no input itself;
+    DesktopTestMode drives it today, and M4 controllers can call the same
+    methods. Later milestones add their parameters to `PerceptionParameterList`.
+
+The mapping runs in C#, not HLSL; see ARCHITECTURE §6. Milestone 1 is complete.
+
+**Milestone 2 (ana/kata translation)** acceptance is met by the existing code:
+R/F move `position.w`, objects' gaps go to zero as you reach them, and focus
+and W movement stay independent. `ProjectionDriverTests` and
+`PlayerStateTests` cover it, and `lab4d-m2-player-w1.png` shows it (player at
+w = +1 with focus 0 looks like focus +1, but the HUD differs). Unity tests:
+42/42.
 
 **Desktop test mode** (`Runtime/Input4D/DesktopTestMode`, on the World4D root):
 the keyboard drives SPEC §7's three operations whether or not a headset is

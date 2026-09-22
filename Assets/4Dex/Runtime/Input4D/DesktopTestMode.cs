@@ -32,11 +32,14 @@ namespace FourDex.Runtime
         public const string Legend =
             "DESKTOP  RMB-drag look   WASD walk   R / F ana / kata   Shift fast\n" +
             "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ     FOCUS  [ ]  or wheel\n" +
-            "RESET  Backspace view + focus   Shift+Backspace everything";
+            "RESET  Backspace view + focus   Shift+Backspace everything\n" +
+            "PANELS  Tab parameters (Up/Down, - / =)   V W-slice view";
 
         [SerializeField] private XRRig? _rig;
         [SerializeField] private Player4D? _player;
         [SerializeField] private CoordinateHUD? _hud;
+        [SerializeField] private RuntimeParameterPanel? _panel;
+        [SerializeField] private WSliceViewer? _sliceViewer;
         [SerializeField] private HeadMode _headMode = HeadMode.Auto;
         [SerializeField] private DesktopSpeeds _speeds = DesktopSpeeds.Default;
 
@@ -49,6 +52,7 @@ namespace FourDex.Runtime
         private SimulatedHmdPoseSource? _simulatedHead;
         private IHmdPoseSource? _previousSource;
         private DesktopCommands _lastCommands;
+        private readonly KeyRepeat _repeat = new KeyRepeat();
 
         public bool IsSimulatingHead => _simulatedHead != null;
 
@@ -89,6 +93,53 @@ namespace FourDex.Runtime
 
             DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
                 _player.ResetToStart);
+
+            DrivePanels(Keyboard.current);
+        }
+
+        // Panel keys are separate from the 4D commands: they change what is shown or tuned, never the player state.
+        private void DrivePanels(Keyboard? k)
+        {
+            if (k == null)
+                return;
+            if (_sliceViewer != null && k.vKey.wasPressedThisFrame)
+                _sliceViewer.Visible = !_sliceViewer.Visible;
+            if (_panel == null)
+                return;
+            if (k.tabKey.wasPressedThisFrame)
+                _panel.Toggle();
+            if (!_panel.Visible)
+                return;
+
+            float now = Time.unscaledTime;
+            bool coarse = k.shiftKey.isPressed;
+            if (_repeat.Fired(k.downArrowKey, now)) _panel.MoveSelection(+1);
+            if (_repeat.Fired(k.upArrowKey, now)) _panel.MoveSelection(-1);
+            if (_repeat.Fired(k.equalsKey, now)) _panel.Adjust(+1, coarse);
+            if (_repeat.Fired(k.minusKey, now)) _panel.Adjust(-1, coarse);
+        }
+
+        /// <summary>Press fires once; holding fires again after a pause, then steadily, like a text cursor.</summary>
+        private sealed class KeyRepeat
+        {
+            private const float Delay = 0.35f;
+            private const float Interval = 0.06f;
+            private readonly System.Collections.Generic.Dictionary<KeyControl, float> _next = new System.Collections.Generic.Dictionary<KeyControl, float>();
+
+            public bool Fired(KeyControl key, float now)
+            {
+                if (key.wasPressedThisFrame)
+                {
+                    _next[key] = now + Delay;
+                    return true;
+                }
+                if (key.isPressed && _next.TryGetValue(key, out float next) && now >= next)
+                {
+                    _next[key] = now + Interval;
+                    return true;
+                }
+                return false;
+            }
         }
 
         // Pulled by the HUD at its own refresh rate, so the monitor costs nothing between refreshes.

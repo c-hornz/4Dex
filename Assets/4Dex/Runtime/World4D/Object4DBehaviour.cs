@@ -45,6 +45,9 @@ namespace FourDex.Runtime
         /// </summary>
         public float WGap { get; internal set; }
 
+        /// <summary>Half the object's extent along the viewer's W axis this frame; rotation through W changes it.</summary>
+        public float ViewerHalfExtentW { get; internal set; }
+
         /// <summary>This frame's perception channels. Written by <c>ProjectionDriver</c> when it has PerceptionSettings.</summary>
         public PerceptionChannels Channels { get; internal set; }
 
