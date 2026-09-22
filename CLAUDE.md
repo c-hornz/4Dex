@@ -15,9 +15,11 @@ substitute a different design.
 
 ## Current status
 
-Milestone 0 in progress, on Windows. `src/4Dex.Math4D` builds and
-`tests/4Dex.Tests` passes (62/62, .NET SDK 10.0.401). Still to do for Milestone 0: World4D,
-the Unity project (URP + OpenXR/Oculus), Player4DState (owns the focusW /
+Milestone 0 in progress, on Windows. `src/4Dex.Math4D` and `src/4Dex.World4D`
+build and `tests/4Dex.Tests` passes (78/78, .NET SDK 10.0.401). World4D's
+namespace is `FourDex.World`, not `FourDex.World4D`: a namespace named like its
+`World4D` class would shadow the class from every other `FourDex.*` namespace.
+Still to do for Milestone 0: the Unity project (URP + OpenXR/Oculus), Player4DState (owns the focusW /
 position.w invariants), HmdPoseSource/XRRig, CoordinateHUD, Lab4D scene.
 
 **Unity version: 6000.6.2f1** (Unity 6.6, a non-LTS update release). Chosen

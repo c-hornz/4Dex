@@ -35,7 +35,7 @@ namespace FourDex.Tests
         {
             Assert.Equal(5f, new Vec4(0f, 3f, 0f, 4f).Length);
             Assert.Equal(2f, new Vec4(1f, 1f, 1f, 1f).Length);
-            Assert.Equal(Vec4.Distance(Vec4.Zero, new Vec4(0f, 0f, 3f, 4f)), 5f);
+            Assert.Equal(5f, Vec4.Distance(Vec4.Zero, new Vec4(0f, 0f, 3f, 4f)));
         }
 
         [Fact]

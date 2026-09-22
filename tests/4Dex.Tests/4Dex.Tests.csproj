@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\4Dex.Math4D\4Dex.Math4D.csproj" />
+    <ProjectReference Include="..\..\src\4Dex.World4D\4Dex.World4D.csproj" />
   </ItemGroup>
 
 </Project>

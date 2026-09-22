@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -11,20 +11,54 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "4Dex.Math4D", "src\4Dex.Mat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "4Dex.Tests", "tests\4Dex.Tests\4Dex.Tests.csproj", "{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "4Dex.World4D", "src\4Dex.World4D\4Dex.World4D.csproj", "{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|x64.Build.0 = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Debug|x86.Build.0 = Debug|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|x64.ActiveCfg = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|x64.Build.0 = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|x86.ActiveCfg = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001}.Release|x86.Build.0 = Release|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|x64.Build.0 = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Debug|x86.Build.0 = Debug|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|x64.ActiveCfg = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|x64.Build.0 = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|x86.ActiveCfg = Release|Any CPU
+		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001}.Release|x86.Build.0 = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|x64.Build.0 = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Debug|x86.Build.0 = Debug|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|x64.ActiveCfg = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|x64.Build.0 = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|x86.ActiveCfg = Release|Any CPU
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -32,5 +66,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A2001} = {6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A1001}
 		{6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A3001} = {6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A1002}
+		{D94C803B-07F1-48BC-8817-CC11EBAFF6FC} = {6C1F0E47-3E0B-4B0A-9C8D-2A7B6E0A1001}
 	EndGlobalSection
 EndGlobal
