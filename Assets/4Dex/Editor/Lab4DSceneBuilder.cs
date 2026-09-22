@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using FourDex.Math4D;
 using FourDex.Runtime;
 using FourDex.XR;
 using UnityEditor;
@@ -127,7 +128,8 @@ namespace FourDex.EditorTools
         /// <summary>
         /// Renders the lab from the XR camera's placeholder pose to a PNG, HUD included, without saving the scene.
         /// Optional <c>-playerW</c> and <c>-focusW</c> set the 4D state first, for checking perception headlessly;
-        /// <c>-panel</c> shows the parameter panel.
+        /// <c>-rotXW 90</c> (and the other planes) turns the player; <c>-panel</c> shows the parameter panel;
+        /// <c>-defaultPerception</c> renders with default tuning instead of the project's settings asset.
         /// Batch (graphics needed, so no -nographics): <c>-executeMethod FourDex.EditorTools.Lab4DSceneBuilder.Snapshot -snapshotPath out.png</c>.
         /// </summary>
         public static void Snapshot()
@@ -142,10 +144,23 @@ namespace FourDex.EditorTools
             var registry = Object.FindAnyObjectByType<World4DRegistry>();
             var player = Object.FindAnyObjectByType<Player4D>();
             var driver = Object.FindAnyObjectByType<ProjectionDriver>();
+            if (Array.IndexOf(args, "-defaultPerception") >= 0)
+            {
+                // Render with factory-default tuning, in memory only: reference images stay reproducible whatever
+                // has been tuned into the project's PerceptionSettings asset, and that asset is never touched.
+                Set(driver, "_perception", ScriptableObject.CreateInstance<PerceptionSettings>());
+            }
             foreach (Object4DBehaviour o in Object.FindObjectsByType<Object4DBehaviour>().OrderBy(o => o.name))
                 registry.Register(o);
             player.State.MoveAnaKata(FloatArg(args, "-playerW", 0f));
             player.State.SetFocusW(FloatArg(args, "-focusW", 0f));
+            // -rotXW 90 etc.: turn the player in its own planes, in degrees, applied in the listed order.
+            foreach (Plane4 plane in Plane4Extensions.All)
+            {
+                float degrees = FloatArg(args, "-rot" + plane, 0f);
+                if (degrees != 0f)
+                    player.State.RotateLocal(plane, degrees * Mathf.Deg2Rad);
+            }
             driver.ProjectAll();
 
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();

@@ -19,8 +19,9 @@ namespace FourDex.Runtime
         private const float Epsilon = 5e-4f;
 
         /// <param name="objects">Optional per-object perception state, one line each: the M1 check that focus picks the right object.</param>
+        /// <param name="rotation">Optional SPEC §20 rotation monitor: orientation as plane angles, and per-plane rate.</param>
         public static string Format(Player4DState? player, HmdPose? head, float? focusWidth = null,
-            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null)
+            IEnumerable<(string Name, PerceptionChannels Channels)>? objects = null, RotationMonitor? rotation = null)
         {
             var sb = new StringBuilder(512);
 
@@ -49,6 +50,12 @@ namespace FourDex.Runtime
                 AppendAxis(sb, "W'", b.W);
                 sb.Append("  orthonormality error ")
                   .Append(b.OrthonormalityError().ToString("0.0e+0", CultureInfo.InvariantCulture)).Append('\n');
+
+                if (rotation != null)
+                {
+                    AppendPlanes(sb, "ROTATION deg  ", rotation.Orientation);
+                    AppendPlanes(sb, "RATE deg/s    ", rotation.Rate);
+                }
             }
 
             if (objects != null)
@@ -88,6 +95,26 @@ namespace FourDex.Runtime
         /// <summary>Focus is measured along the player's own W: positive is ana of the player.</summary>
         public static string FocusSide(float focusW) =>
             focusW > Epsilon ? "(ana)" : focusW < -Epsilon ? "(kata)" : "(own slice)";
+
+        // Ordinary planes first, then the ana/kata planes after a bar, so the W part of a rotation reads at a glance.
+        private static void AppendPlanes(StringBuilder sb, string label, Bivector4 b)
+        {
+            sb.Append(label);
+            foreach (Plane4 plane in Plane4Extensions.All)
+            {
+                if (plane == Plane4.XW)
+                    sb.Append(" |");
+                sb.Append("  ").Append(plane).Append(' ').Append(Deg1(b[plane] * Mathf.Rad2Deg));
+            }
+            sb.Append('\n');
+        }
+
+        private static string Deg1(float degrees)
+        {
+            if (Mathf.Abs(degrees) < 0.05f)
+                degrees = 0f;
+            return degrees.ToString("+0.0;-0.0;+0.0", CultureInfo.InvariantCulture);
+        }
 
         private static void AppendAxis(StringBuilder sb, string label, Vec4 v) =>
             sb.Append("  ").Append(label).Append(" (")

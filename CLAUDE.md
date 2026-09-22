@@ -79,8 +79,26 @@ The mapping runs in C#, not HLSL; see ARCHITECTURE §6. Milestone 1 is complete.
 R/F move `position.w`, objects' gaps go to zero as you reach them, and focus
 and W movement stay independent. `ProjectionDriverTests` and
 `PlayerStateTests` cover it, and `lab4d-m2-player-w1.png` shows it (player at
-w = +1 with focus 0 looks like focus +1, but the HUD differs). Unity tests:
-42/42.
+w = +1 with focus 0 looks like focus +1, but the HUD differs).
+
+**Milestone 3 (4D rotation)**: the acceptance test passes. Rotating XW/YW/ZW
+turns the perceived 3D subspace, and `position.w` is unchanged:
+`RotationTests`, plus `lab4d-m3-xw45.png` and `lab4d-m3-xw90.png`. Pieces:
+- `Rotor4.Log()`: the six simultaneous plane angles, the inverse of
+  `FromBivector`, taking the smaller-angle side of the double cover.
+- `Player4D/RotationMonitor`: orientation angles, plus a smoothed per-plane
+  rate in the player's own planes, measured from successive orientations, so
+  it works for any input source. The HUD shows ROTATION and RATE lines
+  (SPEC §20).
+- `ProjectionDriver` sizes each object from its 4D box's extent along each
+  footprint axis. That's exact for 3D rotations; through W, the extent turned
+  into X shows as width.
+- Ordinary planes: the 4D view's XZ is on the arrows. XY/YZ come from the head
+  (pitch/roll) and get mapped in M4.
+
+Snapshot `-rotXW 90` (any plane) turns the player; `-defaultPerception`
+renders with default tuning, so references don't depend on tuning saved in the
+settings asset. Unity tests: 48/48.
 
 **Desktop test mode** (`Runtime/Input4D/DesktopTestMode`, on the World4D root):
 the keyboard drives SPEC §7's three operations whether or not a headset is

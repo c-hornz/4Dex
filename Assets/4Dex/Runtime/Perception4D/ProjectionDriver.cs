@@ -84,8 +84,25 @@ namespace FourDex.Runtime
                     member.transform.SetPositionAndRotation(position, rotation);
 
                 // Size comes from the 4D extent too, for unit-sized meshes (cube, sphere) under an unscaled parent.
-                member.transform.localScale = 2f * body.HalfExtents.Xyz();
+                member.transform.localScale = FootprintScale(rotation, relative, body.HalfExtents);
             }
+        }
+
+        /// <summary>
+        /// Full size along each of the footprint's three axes: the 4D box's extent along that axis. Exact for ordinary
+        /// rotations, where the axes are the box's own. Through W it is the rigid object's whole 3D footprint, so W
+        /// extent turned toward X shows as width (ARCHITECTURE §9, risk 1: a projection, not a true cross-section).
+        /// </summary>
+        private static Vector3 FootprintScale(Quaternion footprint, Rotor4 relative, Vec4 h)
+        {
+            Vector3 bx = relative.Apply(Vec4.UnitX).Xyz();
+            Vector3 by = relative.Apply(Vec4.UnitY).Xyz();
+            Vector3 bz = relative.Apply(Vec4.UnitZ).Xyz();
+            Vector3 bw = relative.Apply(Vec4.UnitW).Xyz();
+            float Extent(Vector3 axis) => 2f * (
+                Mathf.Abs(Vector3.Dot(axis, bx)) * h.X + Mathf.Abs(Vector3.Dot(axis, by)) * h.Y +
+                Mathf.Abs(Vector3.Dot(axis, bz)) * h.Z + Mathf.Abs(Vector3.Dot(axis, bw)) * h.W);
+            return new Vector3(Extent(footprint * Vector3.right), Extent(footprint * Vector3.up), Extent(footprint * Vector3.forward));
         }
 
         /// <summary>

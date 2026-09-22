@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FourDex.Perception;
+using FourDex.Player;
 using FourDex.XR;
 using UnityEngine;
 using UnityEngine.UI;
@@ -36,6 +37,8 @@ namespace FourDex.Runtime
 
         private Text? _text;
         private float _nextRefresh;
+        private float _lastSampleTime = -1f;
+        private readonly RotationMonitor _rotation = new RotationMonitor();
 
         public string CurrentText => _text != null ? _text.text : string.Empty;
 
@@ -57,7 +60,15 @@ namespace FourDex.Runtime
             float? focusWidth = _projection != null && _projection.Perception != null
                 ? _projection.Perception.Parameters.FocusWidth
                 : (float?)null;
-            string readout = CoordinateReadout.Format(_player != null ? _player.State : null, head, focusWidth, ObjectLines());
+            Player4DState? state = _player != null ? _player.State : null;
+            if (state != null)
+            {
+                // Sampled at the HUD's refresh rate: rate is measured over the interval since the last refresh.
+                float now = Time.unscaledTime;
+                _rotation.Sample(state.Orientation, _lastSampleTime < 0f ? 0f : now - _lastSampleTime);
+                _lastSampleTime = now;
+            }
+            string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null);
             string? footer = Footer?.Invoke();
             text.text = string.IsNullOrEmpty(footer) ? readout : readout + "\n\n" + footer;
 
