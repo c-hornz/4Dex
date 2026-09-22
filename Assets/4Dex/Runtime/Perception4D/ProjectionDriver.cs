@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FourDex.Math4D;
 using FourDex.Perception;
 using FourDex.World;
@@ -29,6 +30,37 @@ namespace FourDex.Runtime
 
         private readonly IProjection4 _projection = new SliceProjection();
         private readonly SurveyRamp _survey = new SurveyRamp();
+
+        /// <summary>One occluder in the 4D shadow field: where it is in the scene, how far it reaches, and its W channels.</summary>
+        public readonly struct ShadowOccluder
+        {
+            public ShadowOccluder(string name, Vector3 center, float radius, ShadowChannels channels)
+            {
+                Name = name;
+                Center = center;
+                Radius = radius;
+                Channels = channels;
+            }
+
+            public readonly string Name;
+            public readonly Vector3 Center;
+            public readonly float Radius;
+            public readonly ShadowChannels Channels;
+        }
+
+        // Bounded on purpose: the shadow field costs occluders x receiver pixels (ARCHITECTURE §9, risk 4).
+        private const int MaxOccluders = 16;
+
+        private static readonly int OccluderSphereId = Shader.PropertyToID("_FourDexOccluderSphere");
+        private static readonly int OccluderWId = Shader.PropertyToID("_FourDexOccluderW");
+        private static readonly int OccluderCountId = Shader.PropertyToID("_FourDexOccluderCount");
+
+        private readonly List<ShadowOccluder> _occluders = new List<ShadowOccluder>();
+        private readonly Vector4[] _occluderSpheres = new Vector4[MaxOccluders];
+        private readonly Vector4[] _occluderChannels = new Vector4[MaxOccluders];
+
+        /// <summary>This frame's shadow casters, strongest first. Includes objects too far in W to be rendered (SPEC §13).</summary>
+        public IReadOnlyList<ShadowOccluder> Occluders => _occluders;
 
         /// <summary>SPEC §10: hold to survey. Ramps in and out over PerceptionParameters.SurveyRampSeconds.</summary>
         public bool SurveyEngaged
@@ -65,8 +97,10 @@ namespace FourDex.Runtime
 
             // Validated once per frame, so inspector edits apply live and a bad value degrades instead of breaking.
             PerceptionParameters? parameters = _perception != null ? _perception.Parameters.Validated() : null;
+            ShadowParameters? shadow = _perception != null ? _perception.Shadow.Validated() : null;
             if (_perception != null)
                 _perception.PushGlobals();
+            _occluders.Clear();
 
             foreach (Object4DBehaviour member in _world.Members)
             {
@@ -103,8 +137,55 @@ namespace FourDex.Runtime
                     member.transform.SetPositionAndRotation(position, rotation);
 
                 // Size comes from the 4D extent too, for unit-sized meshes (cube, sphere) under an unscaled parent.
-                member.transform.localScale = FootprintScale(rotation, relative, body.HalfExtents);
+                Vector3 scale = FootprintScale(rotation, relative, body.HalfExtents);
+                member.transform.localScale = scale;
+
+                // Shadow casting is deliberately not gated on the object being rendered: an occluder too far in W to
+                // be seen still darkens what it lies above (SPEC §13).
+                if (shadow != null)
+                {
+                    ShadowChannels channels = ShadowModel.Evaluate(member.WGap, shadow);
+                    if (channels.Casts)
+                    {
+                        float radius = 0.5f * Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)) * shadow.RadiusScale;
+                        _occluders.Add(new ShadowOccluder(member.name, member.transform.position, radius, channels));
+                    }
+                }
             }
+
+            UploadShadowField();
+        }
+
+        /// <summary>
+        /// Uploads the shadow field for the shader to evaluate per pixel. Strongest casters win the bounded slots, so
+        /// crowding the scene degrades the weakest shadows rather than flickering arbitrary ones.
+        /// </summary>
+        private void UploadShadowField()
+        {
+            if (_occluders.Count > MaxOccluders)
+            {
+                _occluders.Sort((a, b) => b.Channels.Strength.CompareTo(a.Channels.Strength));
+                _occluders.RemoveRange(MaxOccluders, _occluders.Count - MaxOccluders);
+            }
+
+            for (int i = 0; i < MaxOccluders; i++)
+            {
+                if (i < _occluders.Count)
+                {
+                    ShadowOccluder o = _occluders[i];
+                    _occluderSpheres[i] = new Vector4(o.Center.x, o.Center.y, o.Center.z, o.Radius);
+                    _occluderChannels[i] = new Vector4(o.Channels.Strength, o.Channels.Tint, o.Channels.ShimmerHz, o.Channels.Softness);
+                }
+                else
+                {
+                    _occluderSpheres[i] = Vector4.zero;
+                    _occluderChannels[i] = Vector4.zero;
+                }
+            }
+
+            Shader.SetGlobalVectorArray(OccluderSphereId, _occluderSpheres);
+            Shader.SetGlobalVectorArray(OccluderWId, _occluderChannels);
+            Shader.SetGlobalFloat(OccluderCountId, _occluders.Count);
         }
 
         /// <summary>

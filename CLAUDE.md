@@ -136,6 +136,26 @@ neighbouring W geometry becomes perceptible, with signed cues preserved:
 - The lab gained E/F at w = ±2, OUTSIDE normally, for survey to reveal.
 - Snapshot `-survey 1`.
 
+**Milestone 6 (4D shadow prototype)**: the acceptance test passes. Objects
+outside the visible W focus still cast, and their shadows follow signed W
+distance and focus: `ShadowTests`, `PerceptionDriverTests.HiddenObjects_*`
+and `FocusingOnAHiddenOccluder_*`, plus
+`lab4d-m6-shadow-hidden/focused.png`.
+- `ShadowModel` (engine-free): W gap → strength (fades over `WRange`, far
+  wider than the visibility bands, so unseen objects cast), coherence
+  (`FocusWidth`, SPEC §14), signed tint, shimmer, edge softness.
+- `ProjectionDriver` uploads a bounded occluder list (16, strongest first) as
+  shader globals; casting is deliberately not gated on being rendered.
+- `Phase4DCommon.FourDexShadowField` evaluates it per pixel: darkness, hue by
+  ana/kata, penumbra growing with softness, flicker from shimmer. Unity's own
+  shadows are still unused.
+- The floor uses Phase4D so it receives; the light is steeper and the floor
+  larger so shadows land in view. Snapshot `-lookDown`.
+- Parameters are in `PerceptionSettings.Shadow`, with panel entries.
+
+Milestone 7 continues this: ripple/interference, shadow echoes for W extent,
+and view-dependent shear (SPEC §15-§17).
+
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 

@@ -26,6 +26,17 @@ float _FourDexTintStrength;
 float _FourDexDitherCellsPerMetre;
 float _FourDexFarFaceFill;
 
+// ---- 4D shadow field (SPEC §12-§14) ----
+// Bounded occluder list, uploaded per frame by ProjectionDriver and evaluated per pixel on receivers. Unity's shadow
+// system cannot express any of this, so none of it goes through it (ARCHITECTURE §6).
+#define FOURDEX_MAX_OCCLUDERS 16
+float4 _FourDexOccluderSphere[FOURDEX_MAX_OCCLUDERS]; // xyz centre, w influence radius
+float4 _FourDexOccluderW[FOURDEX_MAX_OCCLUDERS];      // x strength, y signed tint, z shimmer Hz, w edge softness
+float _FourDexOccluderCount;
+float _FourDexShadowDarkness;
+float _FourDexShadowTint;
+float _FourDexShadowReach;
+
 // Cheap 3D hash in [0, 1).
 float FourDexHash31(float3 p)
 {
@@ -61,6 +72,47 @@ float FourDexCoverage(float phase, float3 normalWS, float3 viewDirWS)
     float rim = 1.0 - saturate(abs(dot(normalWS, viewDirWS)));
     fill *= lerp(1.0, lerp(_FourDexFarFaceFill, 1.0, rim), _EdgeWeight);
     return fill;
+}
+
+// Strongest shadow reaching this point, and the ana/kata sign of the occluder that cast it. The occluder's W distance
+// arrives as strength, softness and shimmer, so an unseen occluder still darkens the floor and says which side it is on.
+void FourDexShadowField(float3 positionWS, float3 lightDir, float time, out float shadow, out float tint)
+{
+    shadow = 0;
+    tint = 0;
+    int count = (int)_FourDexOccluderCount;
+
+    [loop] for (int i = 0; i < count; i++)
+    {
+        float4 sphere = _FourDexOccluderSphere[i];
+        float4 w = _FourDexOccluderW[i];
+
+        // Along the light: how far this point lies behind the occluder.
+        float3 d = positionWS - sphere.xyz;
+        float t = dot(d, -lightDir);
+        if (t <= 0 || t > _FourDexShadowReach)
+            continue;
+
+        // Off the shadow axis, against an influence radius that grows with distance (penumbra) and with softness
+        // (SPEC §14: an out-of-focus shadow has uncertain edges).
+        float3 perpendicular = d + lightDir * t;
+        float radius = max(sphere.w * w.w * (1.0 + 0.12 * t), 1e-4);
+        float edge = smoothstep(0.0, 1.0, 1.0 - length(perpendicular) / radius);
+        if (edge <= 0)
+            continue;
+
+        // Fade out at the reach limit, and skip the occluder's own surface.
+        float fade = saturate(1.0 - t / _FourDexShadowReach) * saturate(t / max(sphere.w, 1e-3) - 0.5);
+        // Shimmer: focus mismatch makes the shadow unsteady.
+        float flicker = w.z > 0 ? 0.78 + 0.22 * sin(6.2831853 * w.z * time + sphere.x * 12.9898 + sphere.z * 4.1414) : 1.0;
+
+        float strength = w.x * edge * fade * flicker;
+        if (strength > shadow)
+        {
+            shadow = strength;
+            tint = w.y;
+        }
+    }
 }
 
 // Object-space position in metres: world-scale units that stay attached to the object as it moves and turns.

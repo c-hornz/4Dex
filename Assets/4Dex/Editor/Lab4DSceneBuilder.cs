@@ -47,15 +47,17 @@ namespace FourDex.EditorTools
             light.type = LightType.Directional;
             light.intensity = 1.2f;
             // From behind and above the viewer, so the faces the player sees are the lit ones.
-            light.transform.rotation = Quaternion.Euler(35f, 25f, 0f);
+            light.transform.rotation = Quaternion.Euler(55f, 25f, 0f); // steep enough that shadows land on the floor, not past it
 
             Material objectMaterial = GetOrCreateMaterial("LabObject", new Color(0.82f, 0.82f, 0.82f), "4Dex/Phase4D");
-            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.22f, 0.23f, 0.25f), "Universal Render Pipeline/Lit");
+            // The floor uses Phase4D too, so it receives the 4D shadow field. With no PhaseRenderer it keeps the
+            // shader's in-focus defaults, i.e. renders as ordinary solid geometry.
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
 
             // Plain 3D, not a 4D object: a stable conventional reference for comfort and for judging head tracking.
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor (3D reference, not 4D)";
-            floor.transform.localScale = new Vector3(0.6f, 1f, 0.6f); // 6 m x 6 m
+            floor.transform.localScale = new Vector3(1f, 1f, 1f); // 10 m x 10 m: room for the shadow field
             floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
 
             // Tracking space. The camera's pose is written by XRRig; 1.6 m is only the pre-tracking placeholder.
@@ -183,6 +185,10 @@ namespace FourDex.EditorTools
             driver.ProjectAll();
 
             var hud = Object.FindAnyObjectByType<CoordinateHUD>();
+            // -lookDown tilts the camera (the HUD lives on it) toward the floor, where the shadow field lands.
+            float lookDown = FloatArg(args, "-lookDown", 0f);
+            if (lookDown != 0f)
+                hud.transform.localRotation = Quaternion.Euler(lookDown, 0f, 0f);
             // OnEnable does not run in edit mode, so show what desktop mode would put in the footer.
             if (Object.FindAnyObjectByType<DesktopTestMode>() != null)
                 hud.Help = () => DesktopTestMode.Legend;

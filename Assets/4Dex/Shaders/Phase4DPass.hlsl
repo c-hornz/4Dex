@@ -66,6 +66,17 @@ half4 Phase4DFragment(Varyings input) : SV_Target
     half3 palette = _Tint >= 0 ? _FourDexAnaColor.rgb : _FourDexKataColor.rgb;
     color = lerp(color, palette * max(lighting, 0.35), saturate(abs(_Tint)) * _FourDexTintStrength);
 
+    // 4D shadows: darkness for occlusion, hue for the occluder's ana/kata side (SPEC §12). Cast by occluders whether
+    // or not they are visible from here, which is what makes hidden geometry inferable (SPEC §13).
+    float shadow, shadowTint;
+    FourDexShadowField(input.positionWS, mainLight.direction, time, shadow, shadowTint);
+    if (shadow > 0)
+    {
+        color *= 1.0 - _FourDexShadowDarkness * shadow;
+        half3 shadowHue = shadowTint >= 0 ? _FourDexAnaColor.rgb : _FourDexKataColor.rgb;
+        color = lerp(color, color + shadowHue * 0.35 * shadow, saturate(abs(shadowTint)) * _FourDexShadowTint);
+    }
+
     return half4(color, 1);
 #endif
 }

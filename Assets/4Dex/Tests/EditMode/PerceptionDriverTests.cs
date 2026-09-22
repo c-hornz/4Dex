@@ -1,3 +1,4 @@
+using System.Linq;
 using FourDex.Perception;
 using FourDex.Runtime;
 using NUnit.Framework;
@@ -161,6 +162,49 @@ namespace FourDex.Tests.EditMode
             _driver.ForceSurvey(0f);
             _driver.ProjectAll();
             Assert.IsFalse(ana.GetComponent<Renderer>().enabled, "releasing survey restores normal focus behaviour");
+        }
+
+        [Test]
+        public void HiddenObjects_StillCastShadows_WithTheirAnaKataSign()
+        {
+            // Milestone 6 acceptance: an object outside the visible W focus produces a shadow response, and that
+            // response follows its signed W distance.
+            Object4DBehaviour hiddenAna = AddObject("E", 2f, Thin);
+            Object4DBehaviour hiddenKata = AddObject("F", -2f, Thin);
+            AddObject("A", 0f, Thin);
+
+            _driver.ProjectAll();
+
+            Assert.AreEqual(OcclusionBand.Outside, hiddenAna.Channels.Band);
+            Assert.IsFalse(hiddenAna.GetComponent<Renderer>().enabled, "not rendered");
+
+            var ana = _driver.Occluders.First(o => o.Name == "E");
+            var kata = _driver.Occluders.First(o => o.Name == "F");
+            var local = _driver.Occluders.First(o => o.Name == "A");
+            Assert.Greater(ana.Channels.Strength, 0f, "but it still casts");
+            Assert.Greater(ana.Channels.Tint, 0f);
+            Assert.Less(kata.Channels.Tint, 0f);
+            Assert.AreEqual(ana.Channels.Strength, kata.Channels.Strength, 1e-6f);
+            Assert.Greater(local.Channels.Strength, ana.Channels.Strength, "nearer in W casts more strongly");
+            Assert.Greater(ana.Channels.Softness, local.Channels.Softness, "and its edges are less certain");
+        }
+
+        [Test]
+        public void FocusingOnAHiddenOccluder_SharpensItsShadow()
+        {
+            // SPEC §14: shadows respond to focus, without the player moving.
+            AddObject("E", 2f, Thin);
+            _driver.ProjectAll();
+            var far = _driver.Occluders.First(o => o.Name == "E").Channels;
+
+            _player.State.SetFocusW(2f);
+            _driver.ProjectAll();
+            var focused = _driver.Occluders.First(o => o.Name == "E").Channels;
+
+            Assert.Greater(focused.Coherence, far.Coherence);
+            Assert.Less(focused.Softness, far.Softness);
+            Assert.Less(focused.ShimmerHz, far.ShimmerHz);
+            Assert.AreEqual(0f, _player.State.Position.W, "focus only; the player has not moved");
         }
 
         [Test]

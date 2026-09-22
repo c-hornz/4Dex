@@ -19,9 +19,15 @@ namespace FourDex.Runtime
         private static readonly int TintStrengthId = Shader.PropertyToID("_FourDexTintStrength");
         private static readonly int DitherCellsId = Shader.PropertyToID("_FourDexDitherCellsPerMetre");
         private static readonly int FarFaceFillId = Shader.PropertyToID("_FourDexFarFaceFill");
+        private static readonly int ShadowDarknessId = Shader.PropertyToID("_FourDexShadowDarkness");
+        private static readonly int ShadowTintId = Shader.PropertyToID("_FourDexShadowTint");
+        private static readonly int ShadowReachId = Shader.PropertyToID("_FourDexShadowReach");
 
         [Tooltip("W gap to channels: focus width, response curve, SPEC §11 band thresholds A/B/C, phase and density mappings.")]
         public PerceptionParameters Parameters = new PerceptionParameters();
+
+        [Tooltip("4D shadow field (SPEC §12-§14): unseen occluders still cast, and focus sharpens their shadows.")]
+        public ShadowParameters Shadow = new ShadowParameters();
 
         [Header("Palette (one redundant cue; never the only one)")]
         [Tooltip("Tint toward this for ana (+W). A configurable default, not a rule (SPEC §9).")]
@@ -50,6 +56,10 @@ namespace FourDex.Runtime
             Shader.SetGlobalFloat(TintStrengthId, TintStrength);
             Shader.SetGlobalFloat(DitherCellsId, Mathf.Max(DitherCellsPerMetre, 1f));
             Shader.SetGlobalFloat(FarFaceFillId, Mathf.Clamp01(FarFaceFill));
+            ShadowParameters s = Shadow.Validated();
+            Shader.SetGlobalFloat(ShadowDarknessId, s.Darkness);
+            Shader.SetGlobalFloat(ShadowTintId, s.TintStrength);
+            Shader.SetGlobalFloat(ShadowReachId, s.ReachMetres);
         }
 
         private void OnValidate() => PushGlobals();
