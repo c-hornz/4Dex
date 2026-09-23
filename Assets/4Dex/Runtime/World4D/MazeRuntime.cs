@@ -40,6 +40,9 @@ namespace FourDex.Runtime
         [Tooltip("How close the player's centre may come to a wall.")]
         [SerializeField, Min(0f)] private float _playerRadius = 0.35f;
 
+        [Tooltip("Build the Y faces as floors and ceilings. Only worth it where the grid has more than one level and the player can fly.")]
+        [SerializeField] private bool _buildYFaces;
+
         [Tooltip("Carve the maze procedurally instead of using the authored openings below (SPEC §19, Milestone 9).")]
         [SerializeField] private bool _generate;
 
@@ -113,8 +116,10 @@ namespace FourDex.Runtime
             {
                 foreach (Direction4 direction in Direction4Extensions.All)
                 {
-                    if (direction.Axis() == 1)
-                        continue; // Y: the floor is a plain 3D reference and there are no ceilings yet.
+                    // Y faces are skipped in single-level worlds: the floor is a plain 3D reference and a ceiling
+                    // would only shut out the light.
+                    if (direction.Axis() == 1 && !_buildYFaces)
+                        continue;
                     if (!Maze.HasWall(cell, direction))
                         continue;
                     // Shared faces belong to the cell on the negative side, so each is built once; boundary faces

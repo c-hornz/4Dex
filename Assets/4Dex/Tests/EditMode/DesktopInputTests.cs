@@ -56,6 +56,19 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void PageUpAndDown_Fly_WhichIsTheOnlyWayToReachOtherYLevels()
+        {
+            Assert.AreEqual(1f, Held(k => k.pageUpKey).Fly);
+            Assert.AreEqual(-1f, Held(k => k.pageDownKey).Fly);
+
+            var player = new FourDex.Player.Player4DState();
+            DesktopControls.Apply(player, null, UnityEngine.Quaternion.identity,
+                new DesktopCommands { Fly = 1f }, DesktopSpeeds.Default, 1f);
+            Assert.AreEqual(DesktopSpeeds.Default.Fly, player.Position.Y, 1e-4f);
+            Assert.AreEqual(0f, player.Position.W, "flying is not ana/kata");
+        }
+
+        [Test]
         public void AnaKataKeys_ProduceNoOtherCommand()
         {
             DesktopCommands c = Held(k => k.rKey);

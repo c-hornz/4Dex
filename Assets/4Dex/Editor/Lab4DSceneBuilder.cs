@@ -30,6 +30,8 @@ namespace FourDex.EditorTools
         public const string ScenePath = "Assets/Scenes/Lab4D.unity";
         public const string CellsScenePath = "Assets/Scenes/Cells4D.unity";
         public const string MazeScenePath = "Assets/Scenes/Maze4D.unity";
+        public const string BoxScenePath = "Assets/Scenes/Box4D.unity";
+        public const string RoomsScenePath = "Assets/Scenes/Rooms4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
         private const string MappingFolder = "Assets/4Dex/Settings/Mapping";
@@ -246,7 +248,7 @@ namespace FourDex.EditorTools
             {
                 (Vector4 position, Vector4 half) = maze.WallSlab(cell, direction, 0.2f);
                 walls.Add(AddObject(common.WorldRoot, $"Wall {cell.X}{cell.Y}{cell.Z}{cell.W} {direction}", PrimitiveType.Cube,
-                    common.ObjectMaterial, position, half, default));
+                    WallMaterial(), position, half, default));
             }
 
             foreach (Object4DBehaviour wall in walls)
@@ -294,7 +296,7 @@ namespace FourDex.EditorTools
             {
                 (Vector4 position, Vector4 half) = maze.WallSlab(cell, direction, 0.2f);
                 walls.Add(AddObject(common.WorldRoot, $"Wall {cell.X}{cell.Y}{cell.Z}{cell.W} {direction}", PrimitiveType.Cube,
-                    common.ObjectMaterial, position, half, default));
+                    WallMaterial(), position, half, default));
             }
 
             foreach (Object4DBehaviour wall in walls)
@@ -308,6 +310,135 @@ namespace FourDex.EditorTools
             Debug.Log($"[4Dex] Built {MazeScenePath}: {walls.Count} walls, " +
                       $"{MazeGenerator4D.CountOpenings(maze.Maze, false)} openings ({throughW} through W), " +
                       $"connected: {MazeGenerator4D.IsConnected(maze.Maze)}.");
+        }
+
+        /// <summary>
+        /// Generates <c>Assets/Scenes/Box4D.unity</c>: one closed 6 m room with three shapes at w = 0, +1 and -1.
+        /// The lab without the open horizon, so perception is judged against walls at a known distance.
+        /// </summary>
+        [MenuItem("4Dex/Rebuild Box4D Scene")]
+        public static void BuildBox()
+        {
+            (Scene scene, Common common) = CreateCommon();
+
+            var maze = common.WorldRoot.AddComponent<MazeRuntime>();
+            Set(maze, "_player", common.Player);
+            Set(maze, "_hud", common.Hud);
+            var mazeObject = new SerializedObject(maze);
+            mazeObject.FindProperty("_size").vector4Value = new Vector4(1f, 1f, 1f, 1f);
+            mazeObject.FindProperty("_cellSize").floatValue = 6f;
+            mazeObject.ApplyModifiedPropertiesWithoutUndo();
+
+            AddFloor(new Vector3(0.8f, 1f, 0.8f), Vector3.zero);
+
+            var objects = new List<Object4DBehaviour>();
+            foreach ((Cell4D cell, Direction4 direction) in maze.WallFaces())
+            {
+                (Vector4 position, Vector4 half) = maze.WallSlab(cell, direction, 0.2f);
+                objects.Add(AddObject(common.WorldRoot, $"Wall {direction}", PrimitiveType.Cube, WallMaterial(),
+                    position, half, default));
+            }
+
+            // Three shapes, the SPEC §23 layout, inside the room: same place in 3D, one W apart.
+            objects.Add(AddObject(common.WorldRoot, "A  w=0  (cube)", PrimitiveType.Cube, common.ObjectMaterial,
+                new Vector4(0f, 1.3f, 1.6f, 0f), new Vector4(0.25f, 0.25f, 0.25f, 0.25f), default));
+            objects.Add(AddObject(common.WorldRoot, "B  w=+1 ana  (sphere)", PrimitiveType.Sphere, common.ObjectMaterial,
+                new Vector4(1f, 1.3f, 1.6f, 1f), new Vector4(0.25f, 0.25f, 0.25f, 0.25f), default));
+            objects.Add(AddObject(common.WorldRoot, "C  w=-1 kata  (diamond)", PrimitiveType.Cube, common.ObjectMaterial,
+                new Vector4(-1f, 1.3f, 1.6f, -1f), new Vector4(0.22f, 0.22f, 0.22f, 0.25f), new PlaneAngles { XY = 45f }));
+
+            PlaceOnce(common, objects);
+            EditorSceneManager.SaveScene(scene, BoxScenePath);
+            Debug.Log($"[4Dex] Built {BoxScenePath}: one room, {objects.Count - 3} walls, 3 shapes.");
+        }
+
+        /// <summary>
+        /// Generates <c>Assets/Scenes/Rooms4D.unity</c>: a 3x3x3x3 grid of rooms, 81 of them, with nine distinct
+        /// shapes spread through it. Needs the fly keys, since the grid has three levels in Y.
+        /// </summary>
+        [MenuItem("4Dex/Rebuild Rooms4D Scene")]
+        public static void BuildRooms()
+        {
+            (Scene scene, Common common) = CreateCommon();
+
+            const float cell = 4f;
+            var maze = common.WorldRoot.AddComponent<MazeRuntime>();
+            Set(maze, "_player", common.Player);
+            Set(maze, "_hud", common.Hud);
+            var mazeObject = new SerializedObject(maze);
+            mazeObject.FindProperty("_size").vector4Value = new Vector4(3f, 3f, 3f, 3f);
+            mazeObject.FindProperty("_cellSize").floatValue = cell;
+            mazeObject.FindProperty("_buildYFaces").boolValue = true; // three levels, so floors and ceilings matter
+            mazeObject.FindProperty("_generate").boolValue = true;
+            SerializedProperty generation = mazeObject.FindProperty("_generation");
+            generation.FindPropertyRelative("Seed").intValue = 11;
+            generation.FindPropertyRelative("WBias").floatValue = 0.5f;
+            // Plenty of loops: this is a place to wander and compare perception, not a maze to solve.
+            generation.FindPropertyRelative("ExtraOpenings").intValue = 60;
+            mazeObject.ApplyModifiedPropertiesWithoutUndo();
+
+            // No plain floor plane here: with Y faces built, the grid's own bottom boundary is the floor, and a plane
+            // would cut through the lowest rooms. Start on the middle level, where the shapes are.
+            Set(common.Player, "_startPosition", new Vector4(0f, 3f, 0f, 0f));
+
+            var objects = new List<Object4DBehaviour>();
+            foreach ((Cell4D cell4, Direction4 direction) in maze.WallFaces())
+            {
+                (Vector4 position, Vector4 half) = maze.WallSlab(cell4, direction, 0.18f);
+                objects.Add(AddObject(common.WorldRoot, $"Wall {cell4.X}{cell4.Y}{cell4.Z}{cell4.W} {direction}",
+                    PrimitiveType.Cube, WallMaterial(), position, half, default));
+            }
+
+            // Nine distinct silhouettes at assorted cells and W levels: some share a room with you, some are one
+            // room away, some are only a W step away and invisible until you focus or survey.
+            (string Name, PrimitiveType Shape, Vector4 Cell, Vector4 Half, PlaneAngles Turn)[] shapes =
+            {
+                ("S1 cube", PrimitiveType.Cube, new Vector4(0, 1, 0, 1), Q(0.3f), default),
+                ("S2 sphere", PrimitiveType.Sphere, new Vector4(1, 1, 0, 1), Q(0.3f), default),
+                ("S3 diamond", PrimitiveType.Cube, new Vector4(2, 1, 0, 1), Q(0.28f), new PlaneAngles { XY = 45f }),
+                ("S4 pillar", PrimitiveType.Cube, new Vector4(0, 1, 1, 1), new Vector4(0.2f, 0.9f, 0.2f, 0.3f), default),
+                ("S5 slab", PrimitiveType.Cube, new Vector4(1, 1, 1, 0), new Vector4(0.9f, 0.08f, 0.5f, 0.3f), default),
+                ("S6 tilted", PrimitiveType.Cube, new Vector4(2, 1, 1, 2), Q(0.3f), new PlaneAngles { XW = 45f }),
+                ("S7 small", PrimitiveType.Sphere, new Vector4(0, 1, 2, 2), Q(0.18f), default),
+                ("S8 plank", PrimitiveType.Cube, new Vector4(1, 1, 2, 2), new Vector4(0.6f, 0.3f, 0.12f, 0.3f), default),
+                ("S9 wide", PrimitiveType.Cube, new Vector4(2, 1, 2, 0), new Vector4(0.7f, 0.25f, 0.7f, 0.3f), default),
+            };
+            foreach ((string name, PrimitiveType shape, Vector4 at, Vector4 half, PlaneAngles turn) in shapes)
+            {
+                // Cell centre, lifted to about chest height in that room.
+                var position = new Vector4(at.x * cell, at.y * cell - 0.8f, at.z * cell, at.w * cell);
+                objects.Add(AddObject(common.WorldRoot, name, shape, common.ObjectMaterial, position, half, turn));
+            }
+
+            PlaceOnce(common, objects);
+            EditorSceneManager.SaveScene(scene, RoomsScenePath);
+            Debug.Log($"[4Dex] Built {RoomsScenePath}: {maze.Maze.CellCount} rooms, {objects.Count - shapes.Length} walls, " +
+                      $"{shapes.Length} shapes, connected: {MazeGenerator4D.IsConnected(maze.Maze)}.");
+        }
+
+        private static Vector4 Q(float half) => new Vector4(half, half, half, half);
+
+        /// <summary>Walls are darker than the shapes, so a solid shape does not vanish against a solid wall.</summary>
+        private static Material WallMaterial() => GetOrCreateMaterial("LabWall", new Color(0.42f, 0.43f, 0.46f), "4Dex/Phase4D");
+
+        private static void AddFloor(Vector3 scale, Vector3 position)
+        {
+            Material floorMaterial = GetOrCreateMaterial("LabFloor", new Color(0.30f, 0.31f, 0.33f), "4Dex/Phase4D");
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor (3D reference, not 4D)";
+            floor.transform.localScale = scale;
+            floor.transform.position = position;
+            floor.GetComponent<Renderer>().sharedMaterial = floorMaterial;
+        }
+
+        /// <summary>Registers, projects once so the saved scene shows the real layout, then unregisters.</summary>
+        private static void PlaceOnce(Common common, List<Object4DBehaviour> objects)
+        {
+            foreach (Object4DBehaviour o in objects)
+                common.Registry.Register(o);
+            common.Driver.ProjectAll();
+            foreach (Object4DBehaviour o in objects)
+                common.Registry.Unregister(o);
         }
 
         private static CellOpening Open(int x, int y, int z, int w, Direction4 direction) =>
@@ -331,6 +462,8 @@ namespace FourDex.EditorTools
             string requested = sceneArg >= 0 && sceneArg + 1 < args.Length ? args[sceneArg + 1] : "";
             string scenePath = requested.Contains("Cells") ? CellsScenePath
                 : requested.Contains("Maze") ? MazeScenePath
+                : requested.Contains("Box") ? BoxScenePath
+                : requested.Contains("Rooms") ? RoomsScenePath
                 : ScenePath;
             EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
@@ -512,6 +645,13 @@ namespace FourDex.EditorTools
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != scenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(scenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
+        }
+
+        private static void Set(Object target, string field, Vector4 value)
+        {
+            var so = new SerializedObject(target);
+            so.FindProperty(field).vector4Value = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void Set(Object target, string field, Object value)

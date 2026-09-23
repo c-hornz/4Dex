@@ -204,6 +204,24 @@ adjacency graph, where ana and kata are two of a cell's eight neighbours:
 - Snapshot `-scene Maze4D`, and `-cameraY` for a map view from above, since
   mazes have no ceilings.
 
+**Test scenes** (each has its own **4Dex > Rebuild …** menu item, and
+`Snapshot -scene <name>`):
+- `Lab4D` — the SPEC §23 laboratory, open floor, A/B/C/D/E/F.
+- `Box4D` — one closed 6 m room, three shapes at w = 0, +1, -1: perception
+  judged against walls at a known distance.
+- `Cells4D` — the hand-authored 2x1x2x2 cells whose route needs ana/kata.
+- `Maze4D` — a generated 3x1x3x2 maze.
+- `Rooms4D` — 3x3x3x3 = 81 rooms with nine distinct shapes spread through
+  them. Three Y levels, so it has floors and ceilings (`MazeRuntime`
+  `_buildYFaces`) and needs the fly keys; the player starts on the middle
+  level.
+
+Walls use their own darker `LabWall` material: with one shared material a
+solid shape in front of a solid wall is invisible.
+
+**PgUp / PgDn fly** (vertical movement). The 4D model has no climbing, so this
+is a testing aid for multi-level worlds, not a game mechanic.
+
 Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 

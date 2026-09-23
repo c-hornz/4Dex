@@ -30,7 +30,7 @@ namespace FourDex.Runtime
         }
 
         public const string Legend =
-            "MOVE  WASD walk   R / F ana / kata   Shift fast\n" +
+            "MOVE  WASD walk   R / F ana / kata   PgUp / PgDn fly   Shift fast\n" +
             "HEAD  Alt+arrows look   RMB-drag or M capture   Q / E roll   T / G lean\n" +
             "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel   SURVEY  hold Space\n" +
             "MAPPING  P profile   X freeze   C recenter      PANELS  Tab parameters   V W-slice   H this help\n" +
@@ -214,6 +214,7 @@ namespace FourDex.Runtime
                 if (c.Walk.sqrMagnitude > 1f)
                     c.Walk.Normalize();
                 c.AnaKata = Axis(k.rKey, k.fKey);
+                c.Fly = Axis(k.pageUpKey, k.pageDownKey);
                 c.HeadRoll = Axis(k.qKey, k.eKey);
                 c.HeadLean = Axis(k.tKey, k.gKey);
                 c.XW = Axis(k.lKey, k.jKey);
@@ -302,6 +303,7 @@ namespace FourDex.Runtime
             int start = sb.Length;
             AppendIf(sb, "walk", c.Walk.x, c.Walk.y);
             AppendIf(sb, "anaKata", c.AnaKata);
+            AppendIf(sb, "fly", c.Fly);
             AppendIf(sb, "look", c.LookKeys.x, c.LookKeys.y);
             AppendIf(sb, "headRoll", c.HeadRoll);
             AppendIf(sb, "headLean", c.HeadLean);

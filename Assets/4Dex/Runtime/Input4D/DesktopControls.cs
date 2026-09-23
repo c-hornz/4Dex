@@ -27,6 +27,12 @@ namespace FourDex.Runtime
         /// <summary>§7A: + is ana, - is kata, along world W.</summary>
         public float AnaKata;
 
+        /// <summary>
+        /// §7A: + is up, - is down, along world Y. There is no climbing in the 4D model, so this is a testing aid for
+        /// worlds with more than one level, not a game mechanic.
+        /// </summary>
+        public float Fly;
+
         /// <summary>§7B, in the player's own planes. Each + turns the plane's first axis toward its second.</summary>
         public float XW, YW, ZW, XZ;
 
@@ -48,6 +54,7 @@ namespace FourDex.Runtime
     {
         [Tooltip("Walking, metres per second.")] public float Walk;
         [Tooltip("Ana/kata, W units per second.")] public float AnaKata;
+        [Tooltip("Vertical flight, metres per second.")] public float Fly;
         [Tooltip("Rotation through the 4D planes, degrees per second.")] public float Rotate;
         [Tooltip("focusW change, W units per second.")] public float Focus;
         [Tooltip("Multiplier while Shift is held.")] public float FastMultiplier;
@@ -59,6 +66,7 @@ namespace FourDex.Runtime
         {
             Walk = 1.5f,
             AnaKata = 0.75f,
+            Fly = 1.5f,
             Rotate = 45f,
             Focus = 0.5f,
             FastMultiplier = 3f,
@@ -111,6 +119,8 @@ namespace FourDex.Runtime
             }
             if (c.AnaKata != 0f)
                 player.MoveAnaKata(c.AnaKata * speeds.AnaKata * scale * dt);
+            if (c.Fly != 0f)
+                player.MoveWorld(new Vec4(0f, c.Fly * speeds.Fly * scale * dt, 0f, 0f));
 
             // §7B rotate.
             float step = speeds.Rotate * Mathf.Deg2Rad * scale * dt;

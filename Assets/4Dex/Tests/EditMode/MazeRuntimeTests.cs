@@ -127,6 +127,20 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void YFaces_AreBuiltOnlyWhenAsked()
+        {
+            // Single-level worlds skip floors and ceilings; multi-level ones need them, or flying goes through them.
+            Assert.IsFalse(_maze.WallFaces().Any(f => f.Direction.Axis() == 1));
+
+            var so = new SerializedObject(_maze);
+            so.FindProperty("_size").vector4Value = new Vector4(2f, 3f, 2f, 2f);
+            so.FindProperty("_buildYFaces").boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            Assert.IsTrue(_maze.WallFaces().Any(f => f.Direction.Axis() == 1));
+        }
+
+        [Test]
         public void WallSlabs_SitOnTheirFace_AndSpanOneCellThroughW()
         {
             (Vector4 position, Vector4 half) = _maze.WallSlab(new Cell4D(0, 0, 0, 0), Direction4.PosX, 0.2f);
