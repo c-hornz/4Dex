@@ -31,10 +31,10 @@ namespace FourDex.Runtime
 
         [Header("Palette (one redundant cue; never the only one)")]
         [Tooltip("Tint toward this for ana (+W). A configurable default, not a rule (SPEC §9).")]
-        public Color AnaColor = new Color(0.35f, 0.72f, 1f);
+        public Color AnaColor = new Color(1f, 0.55f, 0.25f);
 
         [Tooltip("Tint toward this for kata (-W).")]
-        public Color KataColor = new Color(1f, 0.55f, 0.25f);
+        public Color KataColor = new Color(0.35f, 0.72f, 1f);
 
         [Range(0f, 1f), Tooltip("How far the palette pulls surface colour at full tint. 0 turns colour off as a cue.")]
         public float TintStrength = 0.6f;
