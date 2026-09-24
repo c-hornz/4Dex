@@ -222,7 +222,24 @@ solid shape in front of a solid wall is invisible.
 **PgUp / PgDn fly** (vertical movement). The 4D model has no climbing, so this
 is a testing aid for multi-level worlds, not a game mechanic.
 
-Not done from SPEC §22: vignette, and snap vs smooth turning. The mappings have
+**Comfort (SPEC §22)** is complete. `src/4Dex.Player4D/Comfort.cs` holds the
+engine-free part; `ComfortSettings` (`Assets/4Dex/Settings/`) is the asset, with
+`cmf:` entries in the runtime panel so it can be tuned from inside the headset:
+- **Vignette**: `ComfortVignette` on the camera draws a head-locked disc
+  (`4Dex/Vignette` shader, geometry rather than a post-process, so it is
+  stereo-safe). It closes with the player's own motion — walking, turning, and
+  travelling ana/kata, each with its own reference rate, worst one winning —
+  and eases in and out. Head motion is deliberately not counted. The aperture
+  is measured against the camera's corner angle, so it means the same on the
+  desktop and in the headset; the mesh rebuilds if the field of view changes.
+  Snapshot `-vignette 0.45` previews it.
+- **Snap turning**: `ComfortTurn` steps ordinary XZ turning by `SnapDegrees`
+  per press instead of sweeping. The XW/YW/ZW rotations are the experiment
+  itself and always stay smooth.
+
+Already present from §22: gain limiting and dead zones per binding, reduced W
+rotation gain, freeze (X), disable HMD mapping, recentre (C), and Backspace as
+the emergency return to a conventional view. The mappings have
 not been tried in the headset, which is where comfort gets judged.
 
 Unity tests: 54/54.

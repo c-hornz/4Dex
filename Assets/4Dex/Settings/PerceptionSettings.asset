@@ -13,22 +13,22 @@ MonoBehaviour:
   m_Name: PerceptionSettings
   m_EditorClassIdentifier: 4Dex.Runtime::FourDex.Runtime.PerceptionSettings
   Parameters:
-    FocusWidth: 0.35
+    FocusWidth: 0.09
     Curve: 0
-    BandA: 0.15
-    BandB: 0.6
-    BandC: 1.5
-    NearMinDensity: 0.35
-    FarDensity: 0.25
+    BandA: 0.040000014
+    BandB: 0.23000005
+    BandC: 2.1000028
+    NearMinDensity: 0.34999993
+    FarDensity: 1
     PhaseBaseFrequency: 2
-    PhaseFrequencyPerW: 6
-    PhaseVelocity: 0.6
-    PhaseAmplitude: 0.6
+    PhaseFrequencyPerW: 8.75
+    PhaseVelocity: 2.1000001
+    PhaseAmplitude: 0.64000005
     InvertPhaseDirection: 0
     TintSaturationW: 1
-    SurveyWidth: 1.2
-    SurveyBandScale: 2
-    SurveyRampSeconds: 0.25
+    SurveyWidth: 10
+    SurveyBandScale: 2.5
+    SurveyRampSeconds: 0.5
   Shadow:
     Enabled: 1
     Darkness: 0.7
@@ -43,14 +43,14 @@ MonoBehaviour:
     RippleBaseFrequency: 1.5
     RippleFrequencyPerW: 2.5
     RippleAmplitude: 0.55
-    RippleSpeed: 0.5
+    RippleSpeed: 0.6
     InvertRipple: 0
-    EchoSpreadScale: 0.5
-    EchoCount: 3
+    EchoSpreadScale: 1.5
+    EchoCount: 5
     ShearScale: 0.6
   AnaColor: {r: 1, g: 0.55, b: 0.25, a: 1}
   KataColor: {r: 0.35, g: 0.72, b: 1, a: 1}
-  TintStrength: 0.6
-  DitherCellsPerMetre: 90
-  FarFaceFill: 0.35
-  MaxShimmerHz: 12
+  TintStrength: 0.66
+  DitherCellsPerMetre: 400
+  FarFaceFill: 0.29999992
+  MaxShimmerHz: 15

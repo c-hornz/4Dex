@@ -34,6 +34,7 @@ namespace FourDex.EditorTools
         public const string RoomsScenePath = "Assets/Scenes/Rooms4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
+        private const string ComfortSettingsPath = "Assets/4Dex/Settings/ComfortSettings.asset";
         private const string MappingFolder = "Assets/4Dex/Settings/Mapping";
 
         private static readonly Color Background = new Color(0.08f, 0.09f, 0.11f);
@@ -152,6 +153,13 @@ namespace FourDex.EditorTools
             Set(panel, "_settings", perception);
             Set(panel, "_mapping", mapping);
 
+            // SPEC §22 comfort: the vignette rides on the camera, and its settings are shared with the controls.
+            ComfortSettings comfort = GetOrCreateComfortSettings();
+            Set(panel, "_comfort", comfort);
+            var vignette = head.AddComponent<ComfortVignette>();
+            Set(vignette, "_player", player);
+            Set(vignette, "_settings", comfort);
+
             // Keyboard 4D controls always; mouse-look head only when no headset is active.
             var desktop = worldGo.AddComponent<DesktopTestMode>();
             Set(desktop, "_rig", rig);
@@ -161,6 +169,7 @@ namespace FourDex.EditorTools
             Set(desktop, "_sliceViewer", sliceViewer);
             Set(desktop, "_mapping", mapping);
             Set(desktop, "_projection", driver);
+            Set(desktop, "_comfort", comfort);
 
             return (scene, new Common(head, worldGo, rig, player, registry, driver, hud, perception, objectMaterial));
         }
@@ -483,6 +492,11 @@ namespace FourDex.EditorTools
             player.State.MoveAnaKata(FloatArg(args, "-playerW", 0f));
             player.State.SetFocusW(FloatArg(args, "-focusW", 0f));
             driver.ForceSurvey(FloatArg(args, "-survey", 0f));
+            // -vignette 0.5 shows the comfort vignette half closed; nothing moves in edit mode to close it by itself.
+            float aperture = FloatArg(args, "-vignette", 0f);
+            var vignette = Object.FindAnyObjectByType<ComfortVignette>();
+            if (aperture > 0f && vignette != null)
+                vignette.Preview(aperture);
             // -rotXW 90 etc.: turn the player in its own planes, in degrees, applied in the listed order.
             foreach (Plane4 plane in Plane4Extensions.All)
             {
@@ -595,6 +609,18 @@ namespace FourDex.EditorTools
             material.SetFloat("_Smoothness", 0.2f);
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        private static ComfortSettings GetOrCreateComfortSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ComfortSettings>(ComfortSettingsPath);
+            if (settings != null)
+                return settings;
+            Directory.CreateDirectory(Path.GetDirectoryName(ComfortSettingsPath)!);
+            settings = ScriptableObject.CreateInstance<ComfortSettings>();
+            AssetDatabase.CreateAsset(settings, ComfortSettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
         }
 
         private static PerceptionSettings GetOrCreatePerceptionSettings()

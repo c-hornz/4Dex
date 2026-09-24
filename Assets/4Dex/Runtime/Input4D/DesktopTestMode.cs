@@ -43,6 +43,7 @@ namespace FourDex.Runtime
         [SerializeField] private WSliceViewer? _sliceViewer;
         [SerializeField] private HeadMappingDriver? _mapping;
         [SerializeField] private ProjectionDriver? _projection;
+        [SerializeField] private ComfortSettings? _comfort;
         [SerializeField] private HeadMode _headMode = HeadMode.Auto;
         [SerializeField] private DesktopSpeeds _speeds = DesktopSpeeds.Default;
 
@@ -116,7 +117,7 @@ namespace FourDex.Runtime
                 : Quaternion.Euler(0f, _rig != null ? _rig.LastPose.Rotation.eulerAngles.y : 0f, 0f);
 
             DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
-                _player.ResetToStart);
+                _player.ResetToStart, _comfort != null ? _comfort.Parameters.Validated() : null);
             // SPEC §22: the emergency reset also returns the head mapping to conventional, recentred.
             if ((_lastCommands.ResetView || _lastCommands.ResetAll) && _mapping != null)
                 _mapping.ReturnToConventional();
@@ -225,8 +226,12 @@ namespace FourDex.Runtime
                 if (k.altKey.isPressed)
                     c.LookKeys = new Vector2(Axis(k.rightArrowKey, k.leftArrowKey), Axis(k.upArrowKey, k.downArrowKey));
                 else
+                {
                     // Math4D XZ + turns X toward Z, which is a turn to the left; Right arrow turns right.
                     c.XZ = Axis(k.leftArrowKey, k.rightArrowKey);
+                    // Presses as well as holds: snap turning steps once per press (SPEC §22).
+                    c.XZPress = (k.leftArrowKey.wasPressedThisFrame ? 1 : 0) - (k.rightArrowKey.wasPressedThisFrame ? 1 : 0);
+                }
                 c.Focus = Axis(k.rightBracketKey, k.leftBracketKey);
                 c.Fast = k.shiftKey.isPressed;
                 bool reset = k.backspaceKey.wasPressedThisFrame;

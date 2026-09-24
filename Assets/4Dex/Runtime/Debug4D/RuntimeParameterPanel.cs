@@ -23,6 +23,9 @@ namespace FourDex.Runtime
         [Tooltip("Optional: adds the mapping entries (profile, comfort switches, W gains, head weights).")]
         [SerializeField] private HeadMappingDriver? _mapping;
 
+        [Tooltip("Optional: adds the SPEC §22 comfort entries (vignette, snap turning).")]
+        [SerializeField] private ComfortSettings? _comfort;
+
         [Tooltip("Top-left corner in the camera's frame, metres. Right of the lab at eye level: it is tall, and nothing else is there.")]
         [SerializeField] private Vector3 _offset = new Vector3(0.5f, 0.05f, 1.15f);
 
@@ -53,6 +56,8 @@ namespace FourDex.Runtime
                 entries.AddRange(PerceptionParameterList.For(_settings));
             if (_mapping != null)
                 entries.AddRange(MappingParameterList.For(_mapping));
+            if (_comfort != null)
+                entries.AddRange(ComfortParameterList.For(_comfort));
             return entries;
         }
 

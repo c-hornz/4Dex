@@ -36,6 +36,9 @@ namespace FourDex.Runtime
         /// <summary>§7B, in the player's own planes. Each + turns the plane's first axis toward its second.</summary>
         public float XW, YW, ZW, XZ;
 
+        /// <summary>Ordinary turn pressed this frame, -1, 0 or +1: what snap turning steps on (SPEC §22).</summary>
+        public int XZPress;
+
         /// <summary>§7C: rate, plus a one-off step in W units (mouse wheel).</summary>
         public float Focus;
         public float FocusStep;
@@ -82,11 +85,15 @@ namespace FourDex.Runtime
     /// </summary>
     public static class DesktopControls
     {
+        // Smooth turning, the conventional default, when no comfort settings are supplied.
+        private static readonly ComfortParameters DefaultComfort = new ComfortParameters();
+
         /// <param name="head">The simulated head, or null when a real HMD supplies the pose.</param>
         /// <param name="headYaw">Current head yaw, used to make walking head-relative.</param>
         /// <param name="resetAll">Called for <see cref="DesktopCommands.ResetAll"/>; the caller owns the authored start.</param>
+        /// <param name="comfort">SPEC §22 comfort settings; without them ordinary turning is smooth.</param>
         public static void Apply(Player4DState player, SimulatedHmdPoseSource? head, Quaternion headYaw,
-            in DesktopCommands c, in DesktopSpeeds speeds, float dt, Action? resetAll = null)
+            in DesktopCommands c, in DesktopSpeeds speeds, float dt, Action? resetAll = null, ComfortParameters? comfort = null)
         {
             if (c.ResetAll)
             {
@@ -127,7 +134,9 @@ namespace FourDex.Runtime
             if (c.XW != 0f) player.RotateLocal(Plane4.XW, c.XW * step);
             if (c.YW != 0f) player.RotateLocal(Plane4.YW, c.YW * step);
             if (c.ZW != 0f) player.RotateLocal(Plane4.ZW, c.ZW * step);
-            if (c.XZ != 0f) player.RotateLocal(Plane4.XZ, c.XZ * step);
+            // Ordinary turning can be snapped; the XW/YW/ZW rotations above are the experiment itself and stay smooth.
+            float turn = ComfortTurn.Step(c.XZ, c.XZPress, speeds.Rotate * scale, comfort ?? DefaultComfort, dt);
+            if (turn != 0f) player.RotateLocal(Plane4.XZ, turn);
 
             // §7C focus.
             float focusDelta = c.Focus * speeds.Focus * scale * dt + c.FocusStep;
