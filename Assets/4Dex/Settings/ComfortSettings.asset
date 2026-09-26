@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 4Dex.Runtime::FourDex.Runtime.ComfortSettings
   Parameters:
     VignetteEnabled: 1
-    VignetteStrength: 0.6
+    VignetteStrength: 0.24999996
     SpeedReference: 2
     TurnReference: 90
     WRateReference: 1
