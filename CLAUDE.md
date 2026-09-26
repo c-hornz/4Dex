@@ -176,7 +176,9 @@ walls stop them (`CellCollisionTests`, `MazeRuntimeTests`, renders
 `lab4d-m8-cells-*.png`).
 - `CellCollision` (engine-free): resolves a move axis by axis against
   `Maze4D`'s faces, so you slide along walls, cannot tunnel at speed, and W is
-  blocked exactly like X/Y/Z.
+  blocked exactly like X/Y/Z. A face belongs to one pair of cells, so a wall
+  confines you only in its own W slice: what looks sealed in 3D is open unless
+  the cell's W faces are closed too (`Hall4D` is the scene for this).
 - `Player4DState.MovementFilter`: the hook collision plugs into, so walking,
   ana/kata and head-driven movement are all constrained without the player
   state knowing about mazes. `RotateLocalAbout`'s pivot shift bypasses it.
@@ -215,6 +217,16 @@ adjacency graph, where ana and kata are two of a cell's eight neighbours:
   them. Three Y levels, so it has floors and ceilings (`MazeRuntime`
   `_buildYFaces`) and needs the fly keys; the player starts on the middle
   level.
+- `Hall4D` — 1x1x6x3: a corridor whose barrier exists in one W slice only, so
+  the way past it is kata, forward, ana; the far end is a dead end in 3D with
+  an alcove ana. What confinement means in 4D, in one scene: a wall spans one
+  cell of W, so it stops you only while you share its slice, and sealing a cell
+  means closing its W faces too. Its wall slabs are built taller than the cell
+  (`position.y`, `half.y` in `BuildHall`) so the corridor reads as enclosed
+  from 1.6 m eye height; that is the slab only, and collision is unchanged.
+  `HallSceneTests` walks the whole route and guards the authored openings.
+  Reference images: `docs/images/hall4d-{corridor,barrier,focus-kata,bypass}.png`,
+  rendered with `-defaultPerception`.
 
 Walls use their own darker `LabWall` material: with one shared material a
 solid shape in front of a solid wall is invisible.

@@ -32,6 +32,7 @@ namespace FourDex.EditorTools
         public const string MazeScenePath = "Assets/Scenes/Maze4D.unity";
         public const string BoxScenePath = "Assets/Scenes/Box4D.unity";
         public const string RoomsScenePath = "Assets/Scenes/Rooms4D.unity";
+        public const string HallScenePath = "Assets/Scenes/Hall4D.unity";
         private const string MaterialFolder = "Assets/4Dex/Materials";
         private const string PerceptionSettingsPath = "Assets/4Dex/Settings/PerceptionSettings.asset";
         private const string ComfortSettingsPath = "Assets/4Dex/Settings/ComfortSettings.asset";
@@ -425,6 +426,88 @@ namespace FourDex.EditorTools
                       $"{shapes.Length} shapes, connected: {MazeGenerator4D.IsConnected(maze.Maze)}.");
         }
 
+        /// <summary>
+        /// Generates <c>Assets/Scenes/Hall4D.unity</c>: a straight hallway blocked by a wall that only exists in one
+        /// W slice, so the way past it is to step kata, walk, and step back ana.
+        /// </summary>
+        /// <remarks>
+        /// The point of the scene is what confinement means in 4D. A wall occupies one cell's worth of W, so it stops
+        /// you only while you share its slice; the barrier here is solid in the corridor and simply absent one cell
+        /// kata. The alcove at the end is the same lesson the other way round: a dead end in 3D with a way out
+        /// through ana. Sealing something in 4D means closing its W faces too.
+        /// </remarks>
+        [MenuItem("4Dex/Rebuild Hall4D Scene")]
+        public static void BuildHall()
+        {
+            (Scene scene, Common common) = CreateCommon();
+
+            const float cell = 3f;
+            // 1 x 1 x 6 x 3: a corridor six cells long, in the middle one of three W slices.
+            var openings = new List<CellOpening>
+            {
+                // The corridor itself, with no opening between z = 2 and z = 3: that is the barrier.
+                Open(0, 0, 0, 1, Direction4.PosZ),
+                Open(0, 0, 1, 1, Direction4.PosZ),
+                Open(0, 0, 3, 1, Direction4.PosZ),
+                Open(0, 0, 4, 1, Direction4.PosZ),
+                // The way past: kata into the parallel corridor, along it, and back ana beyond the barrier.
+                Open(0, 0, 2, 1, Direction4.NegW),
+                Open(0, 0, 2, 0, Direction4.PosZ),
+                Open(0, 0, 3, 0, Direction4.PosZ),
+                Open(0, 0, 4, 0, Direction4.PosW),
+                // A dead end in 3D whose only exit is ana.
+                Open(0, 0, 5, 1, Direction4.PosW),
+            };
+
+            var maze = common.WorldRoot.AddComponent<MazeRuntime>();
+            Set(maze, "_player", common.Player);
+            Set(maze, "_hud", common.Hud);
+            var mazeObject = new SerializedObject(maze);
+            mazeObject.FindProperty("_size").vector4Value = new Vector4(1f, 1f, 6f, 3f);
+            mazeObject.FindProperty("_cellSize").floatValue = cell;
+            SerializedProperty list = mazeObject.FindProperty("_openings");
+            list.arraySize = openings.Count;
+            for (int i = 0; i < openings.Count; i++)
+            {
+                SerializedProperty element = list.GetArrayElementAtIndex(i);
+                element.FindPropertyRelative("X").intValue = openings[i].X;
+                element.FindPropertyRelative("Y").intValue = openings[i].Y;
+                element.FindPropertyRelative("Z").intValue = openings[i].Z;
+                element.FindPropertyRelative("W").intValue = openings[i].W;
+                element.FindPropertyRelative("Direction").enumValueIndex = (int)openings[i].Direction;
+            }
+            mazeObject.ApplyModifiedPropertiesWithoutUndo();
+
+            // Start at the near end of the corridor, in the middle W slice.
+            Set(common.Player, "_startPosition", new Vector4(0f, 0f, 0f, cell));
+            AddFloor(new Vector3(0.5f, 1f, 2f), new Vector3(0f, 0f, 2.5f * cell));
+
+            var objects = new List<Object4DBehaviour>();
+            foreach ((Cell4D at, Direction4 direction) in maze.WallFaces())
+            {
+                (Vector4 position, Vector4 half) = maze.WallSlab(at, direction, 0.2f);
+                // The eyes sit 1.6 m above the floor and a cell is 3 m tall, so a slab built to the cell's Y extent
+                // comes up to your chin and you see over the maze. Taller here so the corridor reads as enclosed;
+                // this is only the slab, and confinement comes from the maze, so nothing about collision changes.
+                position.y += 0.35f;
+                half.y = 1.85f;
+                objects.Add(AddObject(common.WorldRoot, $"Wall z{at.Z} w{at.W} {direction}", PrimitiveType.Cube,
+                    WallMaterial(), position, half, default));
+            }
+
+            // Markers, so each part of the lesson is identifiable at a glance.
+            objects.Add(AddObject(common.WorldRoot, "Goal  end of corridor", PrimitiveType.Sphere, common.ObjectMaterial,
+                new Vector4(0f, 1.1f, 5f * cell, 1f * cell), Q(0.28f), default));
+            objects.Add(AddObject(common.WorldRoot, "Prize  ana of the dead end", PrimitiveType.Cube, common.ObjectMaterial,
+                new Vector4(0f, 1.1f, 5f * cell, 2f * cell), Q(0.25f), new PlaneAngles { XY = 45f }));
+            objects.Add(AddObject(common.WorldRoot, "Bypass  kata of the barrier", PrimitiveType.Sphere, common.ObjectMaterial,
+                new Vector4(0f, 1.1f, 3f * cell, 0f), Q(0.22f), default));
+
+            PlaceOnce(common, objects);
+            EditorSceneManager.SaveScene(scene, HallScenePath);
+            Debug.Log($"[4Dex] Built {HallScenePath}: corridor of 6, {objects.Count - 3} walls, barrier at z=3 in the middle slice.");
+        }
+
         private static Vector4 Q(float half) => new Vector4(half, half, half, half);
 
         /// <summary>Walls are darker than the shapes, so a solid shape does not vanish against a solid wall.</summary>
@@ -473,6 +556,7 @@ namespace FourDex.EditorTools
                 : requested.Contains("Maze") ? MazeScenePath
                 : requested.Contains("Box") ? BoxScenePath
                 : requested.Contains("Rooms") ? RoomsScenePath
+                : requested.Contains("Hall") ? HallScenePath
                 : ScenePath;
             EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
