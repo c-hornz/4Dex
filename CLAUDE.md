@@ -15,9 +15,14 @@ substitute a different design.
 
 ## Current status
 
-Milestone 0 in progress, on Windows. `src/` holds three engine-free libraries,
-Math4D, World4D and Player4D (Player4DState, the §25 focusW / position.w
-invariants). They build and `tests/4Dex.Tests` passes (84/84, .NET SDK 10.0.401).
+**Summary:** every SPEC §24 milestone (1–9) and §22 comfort are done and pass
+their acceptance tests on the desktop. The one open item is Milestone 0's
+in-headset run in the Rift (details at the end of this section). The notes
+below record how each piece works, in the order it was built.
+
+Work is on Windows. `src/` holds the engine-free libraries: Math4D, World4D,
+Player4D (Player4DState, the §25 focusW / position.w invariants), plus
+Perception4D and Input4D, which were added in M1 and M4. They build and `tests/4Dex.Tests` passes (84/84, .NET SDK 10.0.401).
 `src/` is also the Unity local package `com.fourdex.core`, so the same sources
 compile in Unity, with `noEngineReferences` asmdefs. dotnet output goes to
 `artifacts/` (see `Directory.Build.props`) so Unity never sees `obj/`. A new
