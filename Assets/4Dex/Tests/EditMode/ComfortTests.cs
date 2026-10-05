@@ -60,12 +60,69 @@ namespace FourDex.Tests.EditMode
         [Test]
         public void SnapTurn_DoesNotQuantiseTheWRotations()
         {
-            // The XW/YW/ZW rotations are the experiment; only ordinary turning is snapped.
+            // Comfort snap is for ordinary turning only. Stepping the W turns is a navigation setting of its own.
             var state = new Player4DState();
             var snap = new ComfortParameters { TurnMode = TurnMode.Snap }.Validated();
             DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { XW = 1f },
                 DesktopSpeeds.Default, 1f, null, snap);
             Assert.AreEqual(DesktopSpeeds.Default.Rotate, state.Orientation.Log().XW * Mathf.Rad2Deg, 0.01f);
+        }
+
+        [Test]
+        public void SteppedWTurns_StepOnPress_AndPlayOutToAQuarterTurn()
+        {
+            var state = new Player4DState();
+            var assist = new NavigationAssist();
+            var nav = new NavigationParameters { WRotationMode = RotationMode.Snap, WSnapDegrees = 90f, TurnSeconds = 0.2f };
+            var speeds = DesktopSpeeds.Default;
+
+            // Holding does nothing in snap mode; the press starts the turn, and time plays it out.
+            DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { XW = 1f }, speeds, 0.1f,
+                null, null, assist, nav);
+            Assert.IsTrue(state.Orientation.ApproxEquals(Rotor4.Identity));
+            DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { XW = 1f, XWPress = 1 }, speeds, 0.1f,
+                null, null, assist, nav);
+            DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { XW = 1f }, speeds, 0.5f,
+                null, null, assist, nav);
+
+            Assert.IsTrue(state.Orientation.ApproxEquals(Rotor4.FromPlane(Plane4.XW, Mathf.PI / 2f), 1e-5f));
+        }
+
+        [Test]
+        public void AnaKata_InTheViewFrame_FollowsWhatIsShownAsAna()
+        {
+            var nav = new NavigationParameters { AnaKataFrame = WMoveFrame.View, SettleToSlices = false };
+            var state = new Player4DState(new Transform4(Vec4.Zero, Rotor4.FromPlane(Plane4.XW, Mathf.PI)));
+
+            DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { AnaKata = 1f },
+                DesktopSpeeds.Default, 1f, null, null, new NavigationAssist(), nav);
+
+            // Turned half way round through W, R travels world kata, which is the player's own ana.
+            Assert.AreEqual(-DesktopSpeeds.Default.AnaKata, state.Position.W, 1e-4f);
+            Assert.AreEqual(DesktopSpeeds.Default.AnaKata, state.Pose.InverseTransformDirection(state.Position).W, 1e-4f);
+        }
+
+        [Test]
+        public void AlignKey_TurnsToTheNearestAxisAlignedOrientation()
+        {
+            var nav = new NavigationParameters { TurnSeconds = 0f };
+            var state = new Player4DState(new Transform4(Vec4.Zero, Rotor4.FromPlane(Plane4.YW, 1.2f)));
+
+            DesktopControls.Apply(state, null, Quaternion.identity, new DesktopCommands { Align = true },
+                DesktopSpeeds.Default, 0.016f, null, null, new NavigationAssist(), nav);
+
+            Assert.IsTrue(state.Orientation.ApproxEquals(Rotor4.FromPlane(Plane4.YW, Mathf.PI / 2f), 1e-4f));
+        }
+
+        [Test]
+        public void ThePanelExposesTheNavigationControls()
+        {
+            var entries = ComfortParameterList.For(_settings);
+            ParameterEntry frame = entries.Find(e => e.Label.Contains("ana/kata frame"));
+            Assert.AreEqual("View", frame.Display);
+            frame.Adjust(+1, false);
+            Assert.AreEqual(WMoveFrame.World, _settings.Navigation.AnaKataFrame);
+            Assert.IsTrue(entries.Exists(e => e.Label.Contains("settle to slices")));
         }
 
         [Test]

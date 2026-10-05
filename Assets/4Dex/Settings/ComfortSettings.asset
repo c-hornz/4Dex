@@ -21,3 +21,11 @@ MonoBehaviour:
     ResponseSeconds: 0.25
     TurnMode: 0
     SnapDegrees: 30
+  Navigation:
+    AnaKataFrame: 0
+    WRotationMode: 1
+    WSnapDegrees: 90
+    TurnSeconds: 1.3499998
+    SettleToSlices: 1
+    SliceSpacing: 1
+    SettleSeconds: 0.15

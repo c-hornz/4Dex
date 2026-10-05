@@ -252,7 +252,19 @@ engine-free part; `ComfortSettings` (`Assets/4Dex/Settings/`) is the asset, with
   Snapshot `-vignette 0.45` previews it.
 - **Snap turning**: `ComfortTurn` steps ordinary XZ turning by `SnapDegrees`
   per press instead of sweeping. The XW/YW/ZW rotations are the experiment
-  itself and always stay smooth.
+  itself and always stay smooth. (The W turns now have their own stepping; see
+  the navigation aids below.)
+
+**Navigation aids** (ARCHITECTURE §8b, decided with the user 2026-10-01).
+R/F move along the *viewer's* W by default. World W, the old behaviour, made
+ana/kata look reversed after turning through W. XW/YW/ZW step 90° per press as
+a 0.3 s turn. N aligns to the nearest of the 192 axis-aligned orientations.
+The HUD's ALIGNED / OFF-AXIS line names your right/up/fwd/ana in world axes.
+When ana/kata stops, position settles to the nearest W slice or maze cell. All
+of this is in `NavigationParameters` on `ComfortSettings.Navigation`, with
+`nav:` panel entries. Callers that pass no settings get
+`NavigationParameters.Unassisted` (smooth turns, world W, no settling), so
+older tests keep their meaning. Unity tests: 88/88; core tests: 177/177.
 
 Already present from §22: gain limiting and dead zones per binding, reduced W
 rotation gain, freeze (X), disable HMD mapping, recentre (C), and Backspace as

@@ -12,5 +12,10 @@ namespace FourDex.Runtime
     {
         [Tooltip("Vignette response and snap/smooth turning. The spec allows uncomfortable mappings; these make them survivable.")]
         public ComfortParameters Parameters = new ComfortParameters();
+
+        // Kept here rather than in an asset of its own because it answers the same need, staying oriented while the
+        // experiment runs, and the scenes already wire this asset to the desktop controls and the panel.
+        [Tooltip("Ana/kata frame, stepped W turns, align-to-axes and settling into W slices.")]
+        public NavigationParameters Navigation = new NavigationParameters();
     }
 }

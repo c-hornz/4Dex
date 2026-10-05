@@ -43,12 +43,23 @@ corridor whose barrier exists in one W slice only).
 ```
 MOVE    WASD walk   R / F ana / kata   PgUp / PgDn fly   Shift fast
 HEAD    Alt+arrows look   RMB-drag or M capture   Q / E roll   T / G lean
-ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ
+ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ   N align to axes
 FOCUS   [ ] or mouse wheel          SURVEY  hold Space
 MAPPING P profile   X freeze   C recenter
 PANELS  Tab parameters   V W-slice   H help
 RESET   Backspace view + focus + mapping   Shift+Backspace everything
 ```
+
+Navigation aids are on by default, and each can be changed under `nav:` in the parameter
+panel (Tab):
+
+- **R / F** move along your own W, so ana is always what you see as ana.
+- **XW / YW / ZW** turn in 90° steps.
+- **N** turns you to the nearest axis-aligned orientation.
+- The HUD's ALIGNED line names which world axis is your right, up, forward and ana.
+- When you stop moving ana/kata, you settle into the nearest W slice.
+
+See ARCHITECTURE §8b.
 
 ## Layout
 

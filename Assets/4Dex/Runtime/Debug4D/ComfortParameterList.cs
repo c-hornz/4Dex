@@ -12,6 +12,7 @@ namespace FourDex.Runtime
         public static List<ParameterEntry> For(ComfortSettings s)
         {
             ComfortParameters P() => s.Parameters;
+            NavigationParameters N() => s.Navigation;
             void Changed()
             {
 #if UNITY_EDITOR
@@ -29,6 +30,13 @@ namespace FourDex.Runtime
                 ParameterEntry.Float("cmf: vignette response s", () => P().ResponseSeconds, v => { P().ResponseSeconds = v; Changed(); }, 0.05f, 0f, 2f),
                 ParameterEntry.Cycle("cmf: turn mode", () => P().TurnMode, v => { P().TurnMode = v; Changed(); }),
                 ParameterEntry.Float("cmf: snap degrees", () => P().SnapDegrees, v => { P().SnapDegrees = v; Changed(); }, 5f, 5f, 90f, "0"),
+                ParameterEntry.Cycle("nav: ana/kata frame", () => N().AnaKataFrame, v => { N().AnaKataFrame = v; Changed(); }),
+                ParameterEntry.Cycle("nav: W turn mode", () => N().WRotationMode, v => { N().WRotationMode = v; Changed(); }),
+                ParameterEntry.Float("nav: W snap degrees", () => N().WSnapDegrees, v => { N().WSnapDegrees = v; Changed(); }, 15f, 15f, 180f, "0"),
+                ParameterEntry.Float("nav: turn seconds", () => N().TurnSeconds, v => { N().TurnSeconds = v; Changed(); }, 0.05f, 0f, 2f),
+                ParameterEntry.Toggle("nav: settle to slices", () => N().SettleToSlices, v => { N().SettleToSlices = v; Changed(); }),
+                ParameterEntry.Float("nav: slice spacing", () => N().SliceSpacing, v => { N().SliceSpacing = v; Changed(); }, 0.25f, 0.25f, 5f),
+                ParameterEntry.Float("nav: settle seconds", () => N().SettleSeconds, v => { N().SettleSeconds = v; Changed(); }, 0.05f, 0f, 2f),
             };
         }
     }

@@ -45,6 +45,16 @@ namespace FourDex.Tests.EditMode
         }
 
         [Test]
+        public void Readout_NamesAnAlignedOrientation_AndMeasuresAnUnalignedOne()
+        {
+            var aligned = new Player4DState(new Transform4(Vec4.Zero, Rotor4.FromPlane(Plane4.XW, Mathf.PI / 2f)));
+            StringAssert.Contains("ALIGNED  right +W  up +Y  fwd +Z  ana -X", CoordinateReadout.Format(aligned, null));
+
+            var off = new Player4DState(new Transform4(Vec4.Zero, Rotor4.FromPlane(Plane4.XW, 20f * Mathf.Deg2Rad)));
+            StringAssert.Contains("OFF-AXIS 20 deg  nearest right +X  up +Y  fwd +Z  ana +W", CoordinateReadout.Format(off, null));
+        }
+
+        [Test]
         public void Readout_ShowsHeadPose_InSignedDegrees()
         {
             var head = new HmdPose(new Vector3(0f, 1.7f, 0f), Quaternion.Euler(0f, -30f, 0f), false);

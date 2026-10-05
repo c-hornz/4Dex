@@ -75,6 +75,25 @@ namespace FourDex.Player
         /// <summary>Move straight ana (<c>+</c>) or kata (<c>-</c>) along world W.</summary>
         public void MoveAnaKata(float worldDeltaW) => MoveWorld(new Vec4(0f, 0f, 0f, worldDeltaW));
 
+        /// <summary>
+        /// Move ana (<c>+</c>) or kata (<c>-</c>) along the player's own W: toward what is currently shown as ana.
+        /// </summary>
+        /// <remarks>
+        /// Perception measures W gaps along the viewer's W (ARCHITECTURE §5), so this is the ana/kata a player sees.
+        /// <see cref="MoveAnaKata(float)"/>'s world W agrees with it only while the view is not turned through W; at
+        /// 180 degrees of XW the two are opposite. Still §7A: a move, which leaves orientation and focus alone.
+        /// </remarks>
+        public void MoveViewAnaKata(float deltaW) => MoveLocal(new Vec4(0f, 0f, 0f, deltaW));
+
+        /// <summary>Move ana/kata in the given frame (<see cref="WMoveFrame"/>).</summary>
+        public void MoveAnaKata(float deltaW, WMoveFrame frame)
+        {
+            if (frame == WMoveFrame.View)
+                MoveViewAnaKata(deltaW);
+            else
+                MoveAnaKata(deltaW);
+        }
+
         // ---- §7B: rotate ----
 
         /// <summary>Turn in the player's own planes. Position and focus are unchanged.</summary>

@@ -1,4 +1,5 @@
 using System.Text;
+using FourDex.Player;
 using FourDex.XR;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -32,7 +33,8 @@ namespace FourDex.Runtime
         public const string Legend =
             "MOVE  WASD walk   R / F ana / kata   PgUp / PgDn fly   Shift fast\n" +
             "HEAD  Alt+arrows look   RMB-drag or M capture   Q / E roll   T / G lean\n" +
-            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ      FOCUS  [ ]  or wheel   SURVEY  hold Space\n" +
+            "ROTATE  J/L XW   U/O YW   I/K ZW   Left/Right XZ   N align to axes\n" +
+            "FOCUS  [ ]  or wheel   SURVEY  hold Space\n" +
             "MAPPING  P profile   X freeze   C recenter      PANELS  Tab parameters   V W-slice   H this help\n" +
             "RESET  Backspace view + focus + CLASSIC mapping   Shift+Backspace everything";
 
@@ -56,6 +58,8 @@ namespace FourDex.Runtime
         private SimulatedHmdPoseSource? _simulatedHead;
         private IHmdPoseSource? _previousSource;
         private DesktopCommands _lastCommands;
+        private readonly NavigationAssist _navigation = new NavigationAssist();
+        private MazeRuntime? _maze;
         private readonly KeyRepeat _repeat = new KeyRepeat();
 
         public bool IsSimulatingHead => _simulatedHead != null;
@@ -89,6 +93,8 @@ namespace FourDex.Runtime
             }
             if (_hud != null)
                 _hud.Help = BuildHelp;
+            // Settling uses the maze's cells where there is one; it lives on the same World4D root.
+            _maze = GetComponent<MazeRuntime>();
         }
 
         private void OnDisable()
@@ -117,7 +123,9 @@ namespace FourDex.Runtime
                 : Quaternion.Euler(0f, _rig != null ? _rig.LastPose.Rotation.eulerAngles.y : 0f, 0f);
 
             DesktopControls.Apply(_player.State, _simulatedHead, headYaw, _lastCommands, _speeds, Time.deltaTime,
-                _player.ResetToStart, _comfort != null ? _comfort.Parameters.Validated() : null);
+                _player.ResetToStart, _comfort != null ? _comfort.Parameters.Validated() : null,
+                _navigation, _comfort != null ? _comfort.Navigation.Validated() : null,
+                _maze != null && _maze.isActiveAndEnabled ? _maze.CellSize : 0f);
             // SPEC §22: the emergency reset also returns the head mapping to conventional, recentred.
             if ((_lastCommands.ResetView || _lastCommands.ResetAll) && _mapping != null)
                 _mapping.ReturnToConventional();
@@ -221,6 +229,11 @@ namespace FourDex.Runtime
                 c.XW = Axis(k.lKey, k.jKey);
                 c.YW = Axis(k.oKey, k.uKey);
                 c.ZW = Axis(k.iKey, k.kKey);
+                // Presses as well as holds: stepped W turns step once per press.
+                c.XWPress = Press(k.lKey, k.jKey);
+                c.YWPress = Press(k.oKey, k.uKey);
+                c.ZWPress = Press(k.iKey, k.kKey);
+                c.Align = k.nKey.wasPressedThisFrame;
                 // Alt makes the arrows look around instead: keyboard head look, for when mouse input never arrives
                 // in the Game view. Plain arrows keep turning the 4D view in XZ.
                 if (k.altKey.isPressed)
@@ -317,6 +330,7 @@ namespace FourDex.Runtime
             AppendIf(sb, "ZW", c.ZW);
             AppendIf(sb, "XZ", c.XZ);
             AppendIf(sb, "focus", c.Focus + c.FocusStep);
+            if (c.Align) sb.Append("  ALIGN");
             if (c.Fast) sb.Append("  fast");
             if (c.ResetView) sb.Append("  RESET view");
             if (c.ResetAll) sb.Append("  RESET all");
@@ -341,5 +355,8 @@ namespace FourDex.Runtime
 
         private static float Axis(KeyControl positive, KeyControl negative) =>
             (positive.isPressed ? 1f : 0f) - (negative.isPressed ? 1f : 0f);
+
+        private static int Press(KeyControl positive, KeyControl negative) =>
+            (positive.wasPressedThisFrame ? 1 : 0) - (negative.wasPressedThisFrame ? 1 : 0);
     }
 }

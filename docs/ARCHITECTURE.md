@@ -252,6 +252,51 @@ The answers below were decided with the user on 2026-09-22:
   `InputMappingProfile` assets over it. `HeadMappingDriver` is the rig's second
   `PoseSampled` consumer, and never touches the camera.
 
+## 8b. Navigation aids (decided with the user)
+
+The problem: players got lost between W rotations, and ana/kata seemed to
+reverse depending on where they were facing. Decided with the user on
+2026-10-01.
+
+**Why ana/kata reversed.** Perception measures W gaps along the *viewer's* W
+(§5). R/F moved along *world* W (`MoveAnaKata`). Those agree only when the view
+isn't turned through W. At XW 90° R moves you sideways, and at 180° it moves you
+toward what is shown as kata. Head-driven W travel was already viewer-relative
+(`MoveLocal`), so only the keys disagreed.
+
+Goals:
+
+1. **Ana/kata means what you see.** The ana/kata control moves along the
+   viewer's W by default (`WMoveFrame.View`, `Player4DState.MoveViewAnaKata`).
+   With walking, this lets you move along all four of your own directions, and
+   each one keeps its meaning after any turn. World W stays available as a
+   runtime option (`nav: ana/kata frame`). This reads SPEC §7A as "move ana",
+   not literally "change `position.w`". It is still a move, so it never changes
+   orientation or focus.
+2. **Every W turn lands somewhere nameable.** XW/YW/ZW step by `WSnapDegrees`
+   (90° by default) per press, played out over `TurnSeconds` rather than
+   jumping. Smooth stays available. With 90° steps every orientation reached is
+   one of the 192 axis-aligned ones (`AxisAlignment`).
+3. **Recover from anywhere.** Align (N) turns to the nearest axis-aligned
+   orientation. That orientation has the largest trace of AᵀB, so the turn is
+   always the shortest one.
+4. **Know where you are.** The HUD's ALIGNED line names which world axis is
+   your right/up/forward/ana. Off-axis, it shows how far you are from the
+   nearest aligned orientation.
+5. **Don't stop between slices.** When ana/kata movement stops, position eases
+   to the nearest cell centre (in a maze) or W slice (`SliceSpacing`, open
+   scenes). It eases along the world axis the move went along. Settling goes
+   through the movement filter, so walls still apply.
+
+All of this is engine-free (`src/4Dex.Player4D/Navigation.cs`,
+`src/4Dex.Math4D/AxisAlignment.cs`) and tested. Every turn is a fixed bivector
+applied in fractions over time. Rotations about one bivector commute, so a turn
+lands exactly on its target however the frames divide it. Parameters live on
+`ComfortSettings.Navigation`, with `nav:` panel entries.
+
+Not yet done: stepped turns and align from the Touch controllers (M4 bindings),
+and trying these in the headset.
+
 ## 9. Risks
 
 1. **Rigid objects vs. true hypersurface slicing.** Milestones 0-1 treat a 4D

@@ -24,7 +24,7 @@ namespace FourDex.Runtime
         /// <summary>Walk: x = strafe right, y = forward. Head-relative, in the player's own 3-space.</summary>
         public Vector2 Walk;
 
-        /// <summary>§7A: + is ana, - is kata, along world W.</summary>
+        /// <summary>§7A: + is ana, - is kata, along the W that <see cref="NavigationParameters.AnaKataFrame"/> picks.</summary>
         public float AnaKata;
 
         /// <summary>
@@ -38,6 +38,12 @@ namespace FourDex.Runtime
 
         /// <summary>Ordinary turn pressed this frame, -1, 0 or +1: what snap turning steps on (SPEC §22).</summary>
         public int XZPress;
+
+        /// <summary>W turns pressed this frame, -1, 0 or +1: what stepped XW/YW/ZW turns step on.</summary>
+        public int XWPress, YWPress, ZWPress;
+
+        /// <summary>Turn to the nearest axis-aligned orientation.</summary>
+        public bool Align;
 
         /// <summary>§7C: rate, plus a one-off step in W units (mouse wheel).</summary>
         public float Focus;
@@ -92,17 +98,24 @@ namespace FourDex.Runtime
         /// <param name="headYaw">Current head yaw, used to make walking head-relative.</param>
         /// <param name="resetAll">Called for <see cref="DesktopCommands.ResetAll"/>; the caller owns the authored start.</param>
         /// <param name="comfort">SPEC §22 comfort settings; without them ordinary turning is smooth.</param>
+        /// <param name="assist">Plays out stepped turns, aligns and settles. Without it W turning is smooth.</param>
+        /// <param name="navigation">Navigation aids; without them, <see cref="NavigationParameters.Unassisted"/>.</param>
+        /// <param name="cellSize">The maze's cell size for settling, or 0 when the scene has no maze.</param>
         public static void Apply(Player4DState player, SimulatedHmdPoseSource? head, Quaternion headYaw,
-            in DesktopCommands c, in DesktopSpeeds speeds, float dt, Action? resetAll = null, ComfortParameters? comfort = null)
+            in DesktopCommands c, in DesktopSpeeds speeds, float dt, Action? resetAll = null, ComfortParameters? comfort = null,
+            NavigationAssist? assist = null, NavigationParameters? navigation = null, float cellSize = 0f)
         {
+            NavigationParameters nav = navigation ?? NavigationParameters.Unassisted;
             if (c.ResetAll)
             {
+                assist?.Cancel();
                 resetAll?.Invoke();
                 head?.Recenter();
                 return;
             }
             if (c.ResetView)
             {
+                assist?.Cancel();
                 player.ResetOrientation();
                 player.SetFocusW(0f);
                 head?.Recenter();
@@ -124,24 +137,42 @@ namespace FourDex.Runtime
                 Vector3 local = headYaw * new Vector3(c.Walk.x, 0f, c.Walk.y);
                 player.MoveLocal(new Vec4(local.x, local.y, local.z, 0f) * (speeds.Walk * scale * dt));
             }
+            // World direction of this frame's ana/kata travel, which tells the settle which axis to settle along.
+            Vec4 anaKataDirection = Vec4.Zero;
             if (c.AnaKata != 0f)
-                player.MoveAnaKata(c.AnaKata * speeds.AnaKata * scale * dt);
+            {
+                player.MoveAnaKata(c.AnaKata * speeds.AnaKata * scale * dt, nav.AnaKataFrame);
+                Vec4 ana = nav.AnaKataFrame == WMoveFrame.View ? player.Orientation.Apply(Vec4.UnitW) : Vec4.UnitW;
+                anaKataDirection = ana * Mathf.Sign(c.AnaKata);
+            }
             if (c.Fly != 0f)
                 player.MoveWorld(new Vec4(0f, c.Fly * speeds.Fly * scale * dt, 0f, 0f));
 
-            // §7B rotate.
-            float step = speeds.Rotate * Mathf.Deg2Rad * scale * dt;
-            if (c.XW != 0f) player.RotateLocal(Plane4.XW, c.XW * step);
-            if (c.YW != 0f) player.RotateLocal(Plane4.YW, c.YW * step);
-            if (c.ZW != 0f) player.RotateLocal(Plane4.ZW, c.ZW * step);
-            // Ordinary turning can be snapped; the XW/YW/ZW rotations above are the experiment itself and stay smooth.
+            // §7B rotate. W turns step when asked to, so every press lands on a nameable orientation.
+            if (nav.WRotationMode == RotationMode.Snap && assist != null)
+            {
+                assist.StepTurn(player, Plane4.XW, c.XWPress, nav);
+                assist.StepTurn(player, Plane4.YW, c.YWPress, nav);
+                assist.StepTurn(player, Plane4.ZW, c.ZWPress, nav);
+            }
+            else
+            {
+                float step = speeds.Rotate * Mathf.Deg2Rad * scale * dt;
+                if (c.XW != 0f) player.RotateLocal(Plane4.XW, c.XW * step);
+                if (c.YW != 0f) player.RotateLocal(Plane4.YW, c.YW * step);
+                if (c.ZW != 0f) player.RotateLocal(Plane4.ZW, c.ZW * step);
+            }
             float turn = ComfortTurn.Step(c.XZ, c.XZPress, speeds.Rotate * scale, comfort ?? DefaultComfort, dt);
             if (turn != 0f) player.RotateLocal(Plane4.XZ, turn);
+            if (c.Align)
+                assist?.Align(player, nav);
 
             // §7C focus.
             float focusDelta = c.Focus * speeds.Focus * scale * dt + c.FocusStep;
             if (focusDelta != 0f)
                 player.AdjustFocusW(focusDelta);
+
+            assist?.Update(player, anaKataDirection, cellSize, nav, dt);
         }
     }
 }

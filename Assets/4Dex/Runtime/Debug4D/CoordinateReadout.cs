@@ -57,6 +57,7 @@ namespace FourDex.Runtime
                 AppendAxis(sb, "W'", b.W);
                 sb.Append("  orthonormality error ")
                   .Append(b.OrthonormalityError().ToString("0.0e+0", CultureInfo.InvariantCulture)).Append('\n');
+                AppendAlignment(sb, player.Orientation);
 
                 if (rotation != null)
                 {
@@ -116,6 +117,20 @@ namespace FourDex.Runtime
         /// <summary>Focus is measured along the player's own W: positive is ana of the player.</summary>
         public static string FocusSide(float focusW) =>
             focusW > Epsilon ? "(ana)" : focusW < -Epsilon ? "(kata)" : "(own slice)";
+
+        /// <summary>
+        /// The orientation in words: on an axis, which world axis each of the player's directions is; off one, how
+        /// far the nearest axis-aligned orientation is, which is how far N (align) would turn.
+        /// </summary>
+        public static void AppendAlignment(StringBuilder sb, Rotor4 orientation)
+        {
+            float off = AxisAlignment.Angle(orientation, AxisAlignment.Nearest(orientation)) * Mathf.Rad2Deg;
+            if (off < 0.5f)
+                sb.Append("ALIGNED  ").Append(AxisAlignment.Describe(orientation)).Append('\n');
+            else
+                sb.Append("OFF-AXIS ").Append(off.ToString("0", CultureInfo.InvariantCulture)).Append(" deg  nearest ")
+                  .Append(AxisAlignment.Describe(AxisAlignment.Nearest(orientation))).Append('\n');
+        }
 
         // Ordinary planes first, then the ana/kata planes after a bar, so the W part of a rotation reads at a glance.
         private static void AppendPlanes(StringBuilder sb, string label, Bivector4 b)
