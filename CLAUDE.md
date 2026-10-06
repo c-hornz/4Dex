@@ -342,8 +342,16 @@ These are load-bearing. Violating one is a design regression, not a shortcut.
 The math core builds and tests anywhere, without Unity or a headset:
 
 ```
-dotnet test 4Dex.Core.sln
+dotnet test 4Dex.Core.sln -c Release
 ```
+
+On this machine `-c Release` is not optional. Smart App Control is on and has
+blocked the Debug build's `4Dex.Perception4D.dll`, so about a third of the
+tests fail to load it ("An Application Control policy has blocked this file",
+0x800711C7). .NET builds deterministically, so a rebuild produces the same
+bytes and the same verdict; Release produces different bytes and runs. Read the
+error before believing a sudden mass failure: these are load failures, not
+assertions, and they appear across untouched test classes at once.
 
 (Name the solution explicitly: Unity generates its own `4Dex.slnx` at the root.)
 Namespaces are `FourDex.*`, since C# identifiers cannot start with a digit.
