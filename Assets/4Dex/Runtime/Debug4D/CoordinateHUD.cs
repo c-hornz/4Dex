@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FourDex.Perception;
 using FourDex.Player;
 using FourDex.XR;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace FourDex.Runtime
@@ -50,6 +52,8 @@ namespace FourDex.Runtime
         private float _nextRefresh;
         private float _lastSampleTime = -1f;
         private readonly RotationMonitor _rotation = new RotationMonitor();
+        private readonly FrameMonitor _frames = new FrameMonitor();
+        private readonly FrameTiming[] _timings = new FrameTiming[1];
 
         public string CurrentText => _text != null ? _text.text : string.Empty;
 
@@ -65,6 +69,9 @@ namespace FourDex.Runtime
 
         private void Update()
         {
+            // Every frame, unlike the text: a frame-time readout refreshed at 10 Hz would miss what it measures.
+            _frames.Sample(Time.unscaledDeltaTime);
+
             if (Time.unscaledTime < _nextRefresh)
                 return;
             _nextRefresh = Time.unscaledTime + 1f / _refreshHz;
@@ -89,6 +96,7 @@ namespace FourDex.Runtime
                 _lastSampleTime = now;
             }
             string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null, survey);
+            readout += "\n" + PerfLine();
             if (_mapping != null)
                 readout += "\n" + MappingReadout.Format(_mapping.ActiveName, _mapping.MappingEnabled, _mapping.Frozen, _mapping.Contributions);
             string? footer = Footer?.Invoke();
@@ -99,6 +107,36 @@ namespace FourDex.Runtime
             panel.sizeDelta = new Vector2(PanelWidth, text.preferredHeight + 2f * Padding);
 
             RefreshHelp();
+        }
+
+        /// <summary>
+        /// What the frame is costing, and what it is spending it on. In the headset no profiler window is visible,
+        /// so this is the only place the cost can be read while wearing it.
+        /// </summary>
+        /// <remarks>
+        /// The worst frame of the last second matters as much as the mean: a spike is felt, an average is not. Batch
+        /// and SetPass counts come from the editor's own statistics, so they are absent in a build.
+        /// </remarks>
+        private string PerfLine()
+        {
+            var sb = new System.Text.StringBuilder("FRAME ");
+            sb.Append(_frames.MeanMs.ToString("0.0", CultureInfo.InvariantCulture)).Append(" ms (")
+              .Append(_frames.Fps.ToString("0", CultureInfo.InvariantCulture)).Append(" fps)   worst 1 s ")
+              .Append(_frames.WorstMs.ToString("0.0", CultureInfo.InvariantCulture)).Append(" ms");
+            if (_projection != null && _projection.World != null)
+                sb.Append("   objects ").Append(_projection.World.Members.Count);
+
+            // Which side the frame is spent on. Needs Frame Timing Stats in Player Settings; without it the counters
+            // read zero, so the split is simply left off rather than shown as a pair of lies.
+            FrameTimingManager.CaptureFrameTimings();
+            if (FrameTimingManager.GetLatestTimings(1, _timings) > 0 &&
+                (_timings[0].cpuFrameTime > 0d || _timings[0].gpuFrameTime > 0d))
+            {
+                sb.Append("   cpu ").Append(_timings[0].cpuFrameTime.ToString("0.0", CultureInfo.InvariantCulture))
+                  .Append("   gpu ").Append(_timings[0].gpuFrameTime.ToString("0.0", CultureInfo.InvariantCulture))
+                  .Append(" ms");
+            }
+            return sb.ToString();
         }
 
         private void RefreshHelp()
