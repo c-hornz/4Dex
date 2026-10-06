@@ -5,6 +5,8 @@ using FourDex.XR;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace FourDex.Tests.EditMode
 {
@@ -86,6 +88,36 @@ namespace FourDex.Tests.EditMode
                 var canvas = cameraGo.GetComponentInChildren<Canvas>();
                 Assert.NotNull(canvas);
                 Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                Object.DestroyImmediate(playerGo);
+            }
+        }
+
+        [Test]
+        public void Hud_DrawsOverTheWorld_SoACorridorWallCannotCoverIt()
+        {
+            var cameraGo = new GameObject("Camera", typeof(Camera));
+            var playerGo = new GameObject("Player");
+            try
+            {
+                var player = playerGo.AddComponent<Player4D>();
+                var hud = cameraGo.AddComponent<CoordinateHUD>();
+                var so = new SerializedObject(hud);
+                so.FindProperty("_player").objectReferenceValue = player;
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                hud.Refresh();
+
+                // The panels sit about a metre ahead in world space, so without this they are hidden by anything
+                // nearer: exactly the tight spaces where the readout matters.
+                foreach (Graphic graphic in cameraGo.GetComponentsInChildren<Graphic>(true))
+                {
+                    Assert.NotNull(graphic.material, graphic.name);
+                    Assert.AreEqual((int)CompareFunction.Always, graphic.material.GetInt("unity_GUIZTestMode"), graphic.name);
+                }
             }
             finally
             {

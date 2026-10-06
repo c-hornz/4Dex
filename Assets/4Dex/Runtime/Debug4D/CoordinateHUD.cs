@@ -96,7 +96,9 @@ namespace FourDex.Runtime
                 _lastSampleTime = now;
             }
             string readout = CoordinateReadout.Format(state, head, focusWidth, ObjectLines(), state != null ? _rotation : null, survey);
-            readout += "\n" + PerfLine();
+            // At the top, not the bottom: the object list below it is dozens of lines in a maze, and a frame-cost
+            // line pushed off the end of the panel is one you never read.
+            readout = PerfLine() + "\n" + readout;
             if (_mapping != null)
                 readout += "\n" + MappingReadout.Format(_mapping.ActiveName, _mapping.MappingEnabled, _mapping.Frozen, _mapping.Contributions);
             string? footer = Footer?.Invoke();
@@ -105,6 +107,7 @@ namespace FourDex.Runtime
             // Fit the panel to the text, so a footer never spills past the background.
             var panel = (RectTransform)text.rectTransform.parent;
             panel.sizeDelta = new Vector2(PanelWidth, text.preferredHeight + 2f * Padding);
+            DebugPanel.FitInView(panel, GetComponent<Camera>());
 
             RefreshHelp();
         }
@@ -159,6 +162,7 @@ namespace FourDex.Runtime
             helpPanel.gameObject.SetActive(true);
             _helpText.text = help;
             helpPanel.sizeDelta = new Vector2(PanelWidth, _helpText.preferredHeight + 2f * Padding);
+            DebugPanel.FitInView(helpPanel, GetComponent<Camera>());
         }
 
         private IEnumerable<(string, PerceptionChannels, ShadowChannels)>? ObjectLines()

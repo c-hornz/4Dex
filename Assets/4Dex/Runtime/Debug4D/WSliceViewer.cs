@@ -102,6 +102,7 @@ namespace FourDex.Runtime
 
             float plotHeight = members.Count * RowHeight;
             _canvas.sizeDelta = new Vector2(Width, Top + plotHeight + AxisHeight);
+            DebugPanel.FitInView(_canvas, GetComponent<Camera>());
 
             // Bands around focus: the chart shows *why* each object renders as it does.
             // Survey widens B and C, so the shading shows survey reaching further into ana and kata.
