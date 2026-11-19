@@ -289,7 +289,7 @@ active OpenXR runtime.
 Unity runs headless, so Unity-side code can be compiled without the user:
 
 ```
-"C:\Program Files\Unity\Hub\Editor\6000.6.2f1\Editor\Unity.exe" -batchmode -quit -nographics -projectPath C:\Users\cthor\4Dex -logFile <log>
+"E:\6000.6.9f1\Editor\Unity.exe" -batchmode -quit -nographics -projectPath E:\REPO\4Dex -logFile <log>
 ```
 
 Then search the log for `error CS`. Add `-executeMethod Namespace.Class.Method` to
@@ -298,7 +298,9 @@ run an editor script. For Unity tests, drop `-quit` and add `-runTests
 the editor already has open. Keep `-logFile` on a short path: under a long path
 the Library cache exceeds Windows' 260-character limit.
 
-**Unity version: 6000.6.2f1** (Unity 6.6, a non-LTS update release). Chosen
+**Unity version: 6000.6.9f1** (Unity 6.6, a non-LTS update release; upgraded
+from 6000.6.2f1 on 2026-11-19, which also moved Rider to 3.1.0 and the Input
+System to 1.20.1). Chosen
 over the originally recommended 6000.0 LTS; only `Packages/manifest.json` is
 version-specific.
 
