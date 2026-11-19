@@ -17,9 +17,12 @@ namespace FourDex.XR
                 _head = InputDevices.GetDeviceAtXRNode(XRNode.Head);
 
             // Centre-eye rather than device pose: it is the point the stereo eye offsets are measured from.
+            // Fall back to the device pose for runtimes that do not report centre-eye usages.
             if (_head.isValid &&
-                _head.TryGetFeatureValue(CommonUsages.centerEyePosition, out Vector3 position) &&
-                _head.TryGetFeatureValue(CommonUsages.centerEyeRotation, out Quaternion rotation))
+                ((_head.TryGetFeatureValue(CommonUsages.centerEyePosition, out Vector3 position) &&
+                  _head.TryGetFeatureValue(CommonUsages.centerEyeRotation, out Quaternion rotation)) ||
+                 (_head.TryGetFeatureValue(CommonUsages.devicePosition, out position) &&
+                  _head.TryGetFeatureValue(CommonUsages.deviceRotation, out rotation))))
             {
                 _head.TryGetFeatureValue(CommonUsages.isTracked, out bool tracked);
                 pose = new HmdPose(position, rotation, tracked);

@@ -55,7 +55,10 @@ namespace FourDex.Runtime
         [Tooltip("focusW step per mouse-wheel notch.")]
         [SerializeField] private float _focusWheelStep = 0.1f;
 
+        // Non-null only while the simulated head is the rig's pose source.
         private SimulatedHmdPoseSource? _simulatedHead;
+        // Kept across swaps so mouse look keeps its yaw/pitch if the headset drops out and comes back.
+        private SimulatedHmdPoseSource? _simulator;
         private IHmdPoseSource? _previousSource;
         private DesktopCommands _lastCommands;
         private readonly NavigationAssist _navigation = new NavigationAssist();
@@ -83,14 +86,7 @@ namespace FourDex.Runtime
 
         private void OnEnable()
         {
-            bool simulate = _headMode == HeadMode.AlwaysSimulate ||
-                            (_headMode == HeadMode.Auto && !XRSettings.isDeviceActive);
-            if (simulate && _rig != null)
-            {
-                _simulatedHead = new SimulatedHmdPoseSource();
-                _previousSource = _rig.PoseSource;
-                _rig.PoseSource = _simulatedHead;
-            }
+            UpdateHeadSource();
             if (_hud != null)
                 _hud.Help = BuildHelp;
             // Settling uses the maze's cells where there is one; it lives on the same World4D root.
@@ -108,8 +104,38 @@ namespace FourDex.Runtime
                 _hud.Help = null;
         }
 
+        /// <summary>
+        /// Picks the rig's pose source for the current head mode. Rechecked every frame, not just in OnEnable:
+        /// OpenXR starts its session a few frames into play mode, so <see cref="XRSettings.isDeviceActive"/> is still
+        /// false when scene components enable. Deciding once there left the headset rendering with a mouse-driven
+        /// head that never moved.
+        /// </summary>
+        private void UpdateHeadSource()
+        {
+            if (_rig == null)
+                return;
+
+            bool simulate = _headMode == HeadMode.AlwaysSimulate ||
+                            (_headMode == HeadMode.Auto && !XRSettings.isDeviceActive);
+            if (simulate && _simulatedHead == null)
+            {
+                _simulator ??= new SimulatedHmdPoseSource();
+                _simulatedHead = _simulator;
+                _previousSource = _rig.PoseSource;
+                _rig.PoseSource = _simulatedHead;
+            }
+            else if (!simulate && _simulatedHead != null)
+            {
+                if (_previousSource != null)
+                    _rig.PoseSource = _previousSource;
+                _simulatedHead = null;
+                _previousSource = null;
+            }
+        }
+
         private void Update()
         {
+            UpdateHeadSource();
             if (_player == null)
                 return;
 
